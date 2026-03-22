@@ -68,3 +68,151 @@ I've created **4 comprehensive ADHD-friendly study guides** for all your lecture
 Good luck on your exam tomorrow! 💪 The files are right next to your original lecture files.
 
 Made changes.
+
+Let me start by reading the claude.md file and exploring the mid2-things folder to understand what we're working with.
+
+Read d:\8th semester\adb-final\claude.md
+Globpattern: "mid2-things/**/*"
+Found 6 files
+Bash List root directory contents
+IN
+ls "d:/8th semester/adb-final/"
+
+OUT
+claude.md
+lec2
+lec3
+lec4
+lec5
+lec6
+lect1
+mid2-things
+Now let me read all the files in the mid2-things folder.
+
+Read d:\8th semester\adb-final\mid2-things\4- Disk Storage, Basic File Structures, and Hashing.pptx.txt
+Read d:\8th semester\adb-final\mid2-things\File Structures_Hashing_Practice Problems_Sol.txt
+Read d:\8th semester\adb-final\mid2-things\assignment.txt
+Read d:\8th semester\adb-final\mid2-things\5- Indexing Structures for Files and Physical Database Design.pptx.txt
+Read d:\8th semester\adb-final\mid2-things\5a- Indexing Structures for Files [Exercises].pptx.txt
+Read d:\8th semester\adb-final\mid2-things\Indexing Structures_Practice Problems_Sol.txt
+I've read all 6 files. Let me create easy study versions for each one. I'll work on them in parallel to save time.
+
+Update Todos
+
+Create easy version of Disk Storage, File Structures & Hashing (theory)
+
+Create easy version of File Structures & Hashing Practice Problems
+
+Create easy version of Assignment 2
+
+Create easy version of Indexing Structures (theory)
+
+Create easy version of Indexing Exercises
+
+Create easy version of Indexing Practice Problems
+Write d:\8th semester\adb-final\mid2-things\4- Disk Storage EASY STUDY.txt
+529 lines
+Update Todos
+
+Create easy version of Disk Storage, File Structures & Hashing (theory)
+
+Create easy version of File Structures & Hashing Practice Problems
+
+Create easy version of Assignment 2
+
+Create easy version of Indexing Structures (theory)
+
+Create easy version of Indexing Exercises
+
+Create easy version of Indexing Practice Problems
+Write d:\8th semester\adb-final\mid2-things\File Structures_Hashing_Practice Problems EASY STUDY.txt
+396 lines
+Update Todos
+
+Create easy version of Disk Storage, File Structures & Hashing (theory)
+
+Create easy version of File Structures & Hashing Practice Problems
+
+Create easy version of Assignment 2
+
+Create easy version of Indexing Structures (theory)
+
+Create easy version of Indexing Exercises
+
+Create easy version of Indexing Practice Problems
+Write d:\8th semester\adb-final\mid2-things\assignment EASY STUDY.txt
+307 lines
+Update Todos
+
+Create easy version of Disk Storage, File Structures & Hashing (theory)
+
+Create easy version of File Structures & Hashing Practice Problems
+
+Create easy version of Assignment 2
+
+Create easy version of Indexing Structures (theory)
+
+Create easy version of Indexing Exercises
+
+Create easy version of Indexing Practice Problems
+Write d:\8th semester\adb-final\mid2-things\5- Indexing Structures EASY STUDY.txt
+516 lines
+Update Todos
+
+Create easy version of Disk Storage, File Structures & Hashing (theory)
+
+Create easy version of File Structures & Hashing Practice Problems
+
+Create easy version of Assignment 2
+
+Create easy version of Indexing Structures (theory)
+
+Create easy version of Indexing Exercises
+
+Create easy version of Indexing Practice Problems
+Write d:\8th semester\adb-final\mid2-things\5a- Indexing Exercises EASY STUDY.txt
+429 lines
+Update Todos
+
+Create easy version of Disk Storage, File Structures & Hashing (theory)
+
+Create easy version of File Structures & Hashing Practice Problems
+
+Create easy version of Assignment 2
+
+Create easy version of Indexing Structures (theory)
+
+Create easy version of Indexing Exercises
+
+Create easy version of Indexing Practice Problems
+Write d:\8th semester\adb-final\mid2-things\Indexing Structures_Practice Problems EASY STUDY.txt
+263 lines
+Update Todos
+
+Create easy version of Disk Storage, File Structures & Hashing (theory)
+
+Create easy version of File Structures & Hashing Practice Problems
+
+Create easy version of Assignment 2
+
+Create easy version of Indexing Structures (theory)
+
+Create easy version of Indexing Exercises
+
+Create easy version of Indexing Practice Problems
+All 6 easy study files are done! Here's what I created inside the mid2-things/ folder:
+
+Original File	Easy Version Created	Topics
+4- Disk Storage...txt	4- Disk Storage EASY STUDY.txt	Disk basics, records, blocking, file types, hashing (static/extendible/dynamic/linear), RAID, SANs
+File Structures_Hashing_Practice Problems_Sol.txt	File Structures_Hashing_Practice Problems EASY STUDY.txt	6 solved problems: block fetches, extendible/dynamic/linear hashing step-by-step
+assignment.txt	assignment EASY STUDY.txt	Assignment 2: block fetch queries, static/extendible/dynamic/linear hashing, index size calculations
+5- Indexing Structures...txt	5- Indexing Structures EASY STUDY.txt	Primary/Clustering/Secondary indexes, B-Tree vs B+-Tree, bitmap indexes, SQL index creation
+5a- Indexing Exercises...txt	5a- Indexing Exercises EASY STUDY.txt	One big problem solved 8 ways: primary, secondary (key & non-key), clustering, B+-Tree, B-Tree
+Indexing Structures_Practice Problems_Sol.txt	Indexing Structures_Practice Problems EASY STUDY.txt	I/O cost estimation, B+-Tree vs B-Tree size calculations
+Every file includes:
+
+Simple language (no jargon without explanation)
+Real examples and analogies
+Step-by-step solutions with "why" explanations
+Formula cheat sheets at the end
+Exam tips
