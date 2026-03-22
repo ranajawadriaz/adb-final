@@ -1,0 +1,502 @@
+Disk Storage, Basic File Structures, and Hashing
+1
+
+Slide 13- 2
+Chapter Outline
+Disk Storage Devices
+Files of Records
+Operations on Files
+Unordered Files
+Ordered Files
+Hashed Files
+Dynamic and Extendible Hashing Techniques 
+RAID Technology
+2
+
+Slide 13- 3
+Disk Storage Devices
+Preferred secondary storage device for high storage capacity and low cost.
+Data stored as magnetized areas on magnetic disk surfaces.
+A disk pack contains several magnetic disks connected to a rotating spindle.
+Disks are divided into concentric circular tracks  on each disk surface.
+Track capacities vary typically from 4 to 50 Kbytes or more
+3
+
+Slide 13- 4
+Disk Storage Devices (contd.)
+A track is divided into smaller blocks or sectors
+because it usually contains a large amount of information 
+The division of a track into sectors is hard-coded on the disk surface and cannot be changed.
+One type of sector organization calls a portion of a track that subtends a fixed angle at the center as a sector.
+A track is divided into blocks.
+The block size B is fixed for each system.
+Typical block sizes range from B=512 bytes to B=4096 bytes.
+Whole blocks are transferred between disk and main memory for processing.
+4
+
+Slide 13- 5
+Disk Storage Devices (contd.)
+5
+
+Slide 13- 6
+Disk Storage Devices (contd.)
+A read-write head moves to the track that contains the block to be transferred.
+Disk rotation moves the block under the read-write head for reading or writing.
+A physical disk block (hardware) address consists of:
+a cylinder number (imaginary collection of tracks of same radius from all recorded surfaces)
+the track number or surface number (within the cylinder)
+and block number (within track).
+Reading or writing a disk block is time consuming because of the seek time s and rotational delay (latency) rd.
+Double buffering can be used to speed up the transfer of contiguous disk blocks.
+6
+
+Slide 13- 7
+7
+
+Slide 13- 8
+Disk Storage Devices (contd.)
+8
+
+Slide 13- 9
+Typical Disk Parameters
+(Courtesy of Seagate Technology)
+9
+
+Slide 13- 10
+Records
+Fixed and variable length records
+Records contain fields which have values of a particular type
+E.g., amount, date, time, age
+Fields themselves may be fixed length or variable length
+Variable length fields can be mixed into one record:
+Separator characters or length fields are needed so that the record can be “parsed.” 
+10
+
+Slide 13- 11
+11
+
+Slide 13- 12
+Blocking
+Blocking: 
+Refers to storing a number of records in one block on the disk.
+Blocking factor (bfr) refers to the number of records per block. 
+There may be empty space in a block if an integral number of records do not fit in one block.
+Spanned Records:
+Refers to records that exceed the size of one or more blocks and hence span a number of blocks.
+12
+
+Slide 13- 13
+Files of Records
+A file is a sequence of records, where each record is a collection of data values (or data items).
+A file descriptor (or file header) includes information that describes the file, such as the field names and their data types, and the addresses of the file blocks on disk.
+Records are stored on disk blocks. 
+The blocking factor bfr for a file is the (average) number of file records stored in a disk block.
+A file can have fixed-length records or variable-length records.
+13
+
+Slide 13- 14
+Files of Records (contd.)
+File records can be unspanned or spanned 
+Unspanned: no record can span two blocks
+Spanned: a record can be stored in more than one block
+The physical disk blocks that are allocated to hold the records of a file can be contiguous, linked, or indexed.
+In a file of fixed-length records, all records have the same format. Usually, unspanned blocking is used with such files.
+Files of variable-length records require additional information to be stored in each record, such as separator characters and field types.
+Usually spanned blocking is used with such files. 
+14
+
+Slide 13- 15
+15
+
+Slide 13- 16
+Operation on Files
+Typical file operations include:
+OPEN: Readies the file for access, and associates a pointer that will refer to a current file record at each point in time.
+FIND: Searches for the first file record that satisfies a certain condition, and makes it the current file record.
+FINDNEXT: Searches for the next file record (from the current record) that satisfies a certain condition, and makes it the current file record.
+READ: Reads the current file record into a program variable.
+INSERT: Inserts a new record into the file & makes it the current file record. 
+DELETE: Removes the current file record from the file, usually by marking the record to indicate that it is no longer valid.
+MODIFY: Changes the values of some fields of the current file record.
+CLOSE: Terminates access to the file.
+REORGANIZE: Reorganizes the file records.
+For example, the records marked deleted are physically removed from the file or a new organization of the file records is created.
+READ_ORDERED: Read the file blocks in order of a specific field of the file. 
+
+16
+
+Slide 13- 17
+Unordered Files
+Also called a heap or a pile file.
+New records are inserted at the end of the file.
+A linear search through the file records is necessary to search for a record.
+This requires reading and searching half the file blocks on the average, and is hence quite expensive.
+Record insertion is quite efficient.
+Reading the records in order of a particular field requires sorting the file records. 
+17
+
+Slide 13- 18
+Ordered Files
+Also called a sequential file.
+File records are kept sorted by the values of an ordering field.
+Insertion is expensive: records must be inserted in the correct order.
+It is common to keep a separate unordered overflow (or transaction) file for new records to improve insertion efficiency; this is periodically merged with the main ordered file.
+A binary search can be used to search for a record on its ordering field value.
+This requires reading and searching log2 of the file blocks on the average, an improvement over linear search.
+Reading the records in order of the ordering field is quite efficient.
+18
+
+Slide 13- 19
+Ordered Files (contd.)
+19
+
+Slide 13- 20
+Average Access Times
+The following table shows the average access time to access a specific record for a given type of file
+
+
+20
+
+Slide 13- 21
+Hashing Techniques:Internal Hashing
+21
+
+Slide 13- 22
+Static Hashed Files (External Hashing)
+Hashing for disk files is called External Hashing
+The file blocks are divided into M equal-sized buckets, numbered bucket0, bucket1, ..., bucketM-1.
+Typically, a bucket corresponds to one (or a fixed number of) disk block.
+One of the file fields is designated to be the hash key of the file.
+The record with hash key value K is stored in bucket i, where i=h(K), and h is the hashing function.
+Search is very efficient on the hash key.
+Collisions occur when a new record hashes to a bucket that is already full.
+An overflow file is kept for storing such records.
+Overflow records that hash to each bucket can be linked together. 
+22
+
+Slide 13- 23
+Static Hashed Files (contd.)
+There are numerous methods for collision resolution, including the following:
+Open addressing: Proceeding from the occupied position specified by the hash address, the program checks the subsequent positions in order until an unused (empty) position is found. 
+Chaining: For this method, various overflow locations are kept, usually by extending the array with a number of overflow positions. In addition, a pointer field is added to each record location. A collision is resolved by placing the new record in an unused overflow location and setting the pointer of the occupied hash address location to the address of that overflow location. 
+Multiple hashing: The program applies a second hash function if the first results in a collision. If another collision results, the program uses open addressing or applies a third hash function and then uses open addressing if necessary.
+23
+
+Slide 13- 24
+Static Hashed Files (contd.)
+24
+
+Slide 13- 25
+Static Hashed Files (contd.)
+To reduce overflow records, a hash file is typically kept 70-80% full.
+The hash function h should distribute the records uniformly among the buckets
+Otherwise, search time will be increased because many overflow records will exist.
+Main disadvantages of static external hashing:
+Fixed number of buckets M is a problem if the number of records in the file grows or shrinks.
+Ordered access on the hash key is quite inefficient (requires  sorting the records).
+25
+
+Slide 13- 26
+Static Hashed Files - Overflow handling
+26
+
+Slide 13- 27
+Hashing Techniques That Allow Dynamic File Expansion
+Dynamic and Extendible Hashing Techniques
+Hashing techniques are adapted to allow the dynamic growth and shrinking of the number of file records.
+These techniques include the following: dynamic hashing, extendible hashing, and linear hashing.
+Both dynamic and extendible hashing use the binary representation of the hash value h(K) in order to access a directory.
+In dynamic hashing the directory is a binary tree.
+In extendible hashing the directory is an array of size 2d where d is called the global depth. 
+27
+
+Slide 13- 28
+Dynamic And Extendible Hashing (contd.)
+The directories can be stored on disk, and they expand or shrink dynamically.
+Directory entries point to the disk blocks that contain the stored records.
+An insertion in a disk block that is full causes the block to split into two blocks and the records are redistributed among the two blocks.
+The directory is updated appropriately.
+Dynamic and extendible hashing do not require an overflow area. 
+Linear hashing does require an overflow area but does not use a directory.
+Blocks are split in linear order as the file expands.
+28
+
+Slide 13- 29
+Extendible Hashing
+29
+
+Slide 13- 30
+Dynamic Hashing
+30
+
+Slide 13- 31
+Parallelizing Disk Access using RAID Technology.
+Secondary storage technology must take steps to keep up in performance and reliability with processor technology.
+A major advance in secondary storage technology is represented by the development of RAID, which originally stood for Redundant Arrays of Inexpensive Disks. 
+The main goal of RAID is to even out the widely different rates of performance improvement of disks against those in memory and microprocessors.
+31
+
+Slide 13- 32
+RAID Technology (contd.)
+A natural solution is a large array of small independent disks acting as a single higher-performance logical disk.
+A concept called data striping is used, which utilizes parallelism to improve disk performance.
+Data striping distributes data transparently over multiple disks to make them appear as a single large, fast disk. 
+32
+
+Slide 13- 33
+RAID Technology (contd.)
+Different raid organizations were defined based on different combinations of the two factors of granularity of data interleaving (striping) and pattern used to compute redundant information.
+Raid level 0 has no redundant data and hence has the best write performance at the risk of data loss 
+Raid level 1 uses mirrored disks.
+Raid level 2 uses memory-style redundancy by using Hamming codes, which contain parity bits for distinct overlapping subsets of components. Level 2 includes both error detection and correction.
+Raid level 3 uses a single parity disk relying on the disk controller to figure out which disk has failed.
+Raid Levels 4 and 5 use block-level data striping, with level 5 distributing data and parity information across all disks. 
+Raid level 6 applies the so-called P + Q redundancy scheme using Reed-Soloman codes to protect against up to two disk failures by using just two redundant disks.  
+33
+
+Slide 13- 34
+Use of RAID Technology (contd.)
+Different raid organizations are being used under different situations
+Raid level 1 (mirrored disks) is the easiest for rebuild of a disk from other disks
+It is used for critical applications like logs
+Raid level 2 uses memory-style redundancy by using Hamming codes, which contain parity bits for distinct overlapping subsets of components.
+Level 2 includes both error detection and correction.
+Raid level 3 (single parity disks relying on the disk controller to figure out which disk has failed) and level 5 (block-level data striping) are preferred for Large volume storage, with level 3 giving higher transfer rates.
+Most popular uses of the RAID technology currently are:
+Level 0 (with striping), Level 1 (with mirroring) and Level 5 with an extra drive for parity.
+Design Decisions for RAID include:
+Level of RAID, number of disks, choice of parity schemes, and grouping of disks for block-level striping.  
+34
+
+Slide 13- 35
+Use of RAID Technology (contd.)
+35
+
+Slide 13- 36
+Use of RAID Technology (contd.)
+36
+
+Slide 13- 37
+Use of RAID Technology (contd.)
+37
+
+Slide 13- 38
+Trends in Disk Technology
+38
+
+Slide 13- 39
+Storage Area Networks
+The demand for higher storage has risen considerably in recent times.
+Organizations have a need to move from a static fixed data center oriented operation to a more flexible and dynamic infrastructure for information processing.
+Thus they are moving to a concept of Storage Area Networks (SANs).
+In a SAN, online storage peripherals are configured as nodes on a high-speed network and can be attached and detached from servers in a very flexible manner.
+This allows storage systems to be placed at longer distances from the servers and provide different performance and connectivity options.
+39
+
+Slide 13- 40
+Storage Area Networks (contd.)
+Advantages of SANs are:
+Flexible many-to-many connectivity among servers and storage devices using fiber channel hubs and switches.
+Up to 10km separation between a server and a storage system using appropriate fiber optic cables.
+Better isolation capabilities allowing non-disruptive addition of new peripherals and servers.
+SANs face the problem of combining storage options from multiple vendors and dealing with evolving standards of storage management software and hardware.
+40
+
+Slide 13- 41
+Summary
+Disk Storage Devices
+Files of Records
+Operations on Files
+Unordered Files
+Ordered Files
+Hashed Files
+Dynamic and Extendible Hashing Techniques 
+RAID Technology
+41
+
+Problem 1
+A file has r=20000 STUDENT records of fixed-length. 
+Each record has the following fields: 
+     NAME (30 bytes), SSN (9 bytes), ADDRESS (40 bytes), PHONE (9 bytes), 
+     BIRTHDATE (8 bytes), SEX (1 byte), MAJORDEPTCODE (4 bytes), MINORDEPTCODE (4 bytes), CLASSCODE (4 bytes, integer), and DEGREEPROGRAM (3 bytes). 
+An additional byte is used as a deletion marker. The file is stored on the disk.
+Calculate the record size R in bytes.
+Calculate the blocking factor bfr and the number of file blocks b assuming an unspanned organization.
+Calculate the average time it takes to find a record by doing a linear search on the file if (i) the file blocks are stored contiguously and double buffering is used, and (ii) the file blocks are not stored contiguously.
+Assume the file is ordered by SSN; calculate the time it takes to search for a record given its SSN value by doing a binary search.
+
+Slide 13- 42
+42
+
+Problem 1 (Solution)
+Calculate the record size R in bytes.
+	R = (30 + 9 + 40 + 9 + 8 + 1 + 4 + 4 + 4 + 3) + 1 = 113 bytes
+Calculate the blocking factor bfr and the number of file blocks b assuming an unspanned organization.
+        bfr = floor(B / R) = floor(512 / 113) = 4 records per block
+        b = ceiling(r / bfr) = ceiling(20000 / 4) = 5000 blocks
+Calculate the average time it takes to find a record by doing a linear search on the file if (i) the file blocks are stored contiguously and double buffering is used, and (ii) the file blocks are not stored contiguously.
+we search on average half the file blocks= 5000/2= 2500 blocks.
+i) the time to read 2500 consecutive blocks 
+       = s+rd+(2500*btt)= 30+12.5+2500*1= 2542.5 msec
+ii) Time is: 2500 * (s + rd + btt) = 2500 * (30 + 12.5 + 1)= 08750 msec =108.75 sec
+Assume the file is ordered by SSN; calculate the time it takes to search for a record given its SSN value by doing a binary search.
+       ceiling(log 2 b) * (s +rd + btt)
+       = ceiling(log 2 5000) * (30 + 12.5 + 1) = 13 * 43.5 = 565.5 msec = 0.5655 sec
+
+Slide 13- 43
+43
+
+Problem 2
+Suppose only 80% of the STUDENT records from Problem1 have a value for PHONE, 85% for MAJORDEPTCODE, 15% for MINORDEPTCODE, and 90% for DEGREEPROGRAM, 
+and we use a variable-length record file. Each record has a 1-byte field type for each field occurring in the record, plus the 1-byte deletion marker and a 1-byte end-ofrecord marker. 
+Suppose we use a spanned record organization, where each block has a 5-byte pointer to the next block (this space is not used for record storage).
+
+Calculate the average record length R in bytes.
+Calculate the number of blocks needed for the file.
+
+Slide 13- 44
+44
+
+Problem 2 (Solution)
+Calculate the average record length R in bytes.
+R fixed = (30+1) + (9+1) + (40+1) + (8+1) + (1+1) + (4+1) +1+1 = 100 bytes
+For the fields (PHONE, MAJORDEPTCODE, MINORDEPTCODE DEGREEPROGRAM), the average number of bytes per record is:
+R variable = ((9+1)*0.8)+((4+1)*0.85)+((4+1)*0.15)+((3+1)*0.9)
+                 = 8+4.25+0.75+3.6= 16.6 bytes
+The average record size R = R fixed + R variable = 100 + 16.6 = 116.6 bytes
+The total bytes needed for the whole file = r * R = 20000 * 116.6 = 2332000 bytes
+
+Calculate the number of blocks needed for the file.
+The bytes available in each block are (B-5) = (512 - 5) = 507 bytes.
+The number of blocks needed for the file are:
+b = ceiling((r * R) / (B - 5)) = ceiling(2332000 / 507) = 4600 blocks
+Slide 13- 45
+45
+
+Problem 3
+Suppose that a disk unit has the following parameters: 
+seek time s=20 msec; rotational delay rd=10 msec; block transfer time btt=1 msec; block size B=2400 bytes; interblock gap size G=600 bytes. 
+An EMPLOYEE file has the following fields: 
+SSN, 9 bytes; LASTNAME, 20 bytes; FIRSTNAME, 20 bytes; MIDDLE INIT,
+1 byte; BIRTHDATE, 10 bytes; ADDRESS, 35 bytes); PHONE, 12 bytes);
+SUPERVISORSSN, 9 bytes; DEPARTMENT, 4 bytes; JOBCODE, 4 bytes;  deletion marker, 1 byte. 
+The EMPLOYEE file has r=30000 STUDENT records, fixed-length format, and unspanned blocking. 
+Write down appropriate formulas and calculate the following values for the above EMPLOYEE file:
+The record size R (including the deletion marker), the blocking factor bfr, and the number of disk blocks b.
+Calculate the wasted space in each disk block because of the unspanned organization.
+Calculate the transfer rate tr and the bulk transfer rate btr for this disk.
+
+Slide 13- 46
+46
+
+Problem 3 (Contd.)
+Calculate the average number of block accesses needed to search for an arbitrary record in the file, using linear search.
+Calculate the average time needed in msec to search for an arbitrary record in the file, using linear search, if the file blocks are stored on consecutive disk blocks and double buffering is used.
+Calculate the average time needed in msec to search for an arbitrary record in the file, using linear search, if the file blocks are not stored on consecutive disk blocks.
+Assume that the records are ordered via some key field. Calculate the average number of block accesses and the average time needed to search for an arbitrary record in the file,  using binary search.
+
+Slide 13- 47
+47
+
+Problem 3 (Solution)
+The record size R (including the deletion marker), the blocking factor bfr, and the number of disk blocks b.
+R = (9 + 20 + 20 + 1 + 10 + 35 + 12 + 9 + 4 + 4) + 1 = 125 bytes
+bfr = floor(B / R) = floor(2400 / 125) = 19 records per block
+b = ceiling(r / bfr) = ceiling(30000 / 19) = 1579 blocks
+Calculate the wasted space in each disk block because of the unspanned organization.
+Wasted space per block = B - (R * Bfr) = 2400 - (125 * 19) = 25 bytes
+Calculate the transfer rate tr and the bulk transfer rate btr for this disk.
+Transfer rate tr= B/btt = 2400 / 1 = 2400 bytes/msec
+bulk transfer rate btr= tr * ( B/(B+G) )
+= 2400*(2400/(2400+600)) = 1920 bytes/msec
+
+Slide 13- 48
+48
+
+Problem 3 (Solution)
+Calculate the average number of block accesses needed to search for an arbitrary record in the file, using linear search.
+For linear search we have the following cases:
+i. search on key field:
+if record is found, half the file blocks are searched on average: b/2= 1579/2 blocks
+if record is not found, all file blocks are searched: b = 1579 blocks
+ii. search on non-key field:
+all file blocks must be searched: b = 1579 blocks
+
+Calculate the average time needed in msec to search for an arbitrary record in the file, using linear search, if the file blocks are stored on consecutive disk blocks and double buffering is used.
+i) Time = s+rd+(n*btt)= 20+10+(1579/2)*1= 819.5 msec
+ii) Time = s+rd+(n*btt)= 20+10+1579*1= 1609 msec
+
+Slide 13- 49
+49
+
+Problem 3 (Solution)
+Calculate the average time needed in msec to search for an arbitrary record in the file, using linear search, if the file blocks are not stored on consecutive disk blocks.
+the time to search n blocks is: n * (s + rd + btt)
+i) if n=b/2: time = (1579/2)*(20+10+1)= 24474.5 msec = 24.475 sec
+ii) if n=b: time = 1579*(20+10+1)= 48949 msec = 48.949 sec
+
+Assume that the records are ordered via some key field. Calculate the average number of block accesses and the average time needed to search for an arbitrary record in the file,  using binary search.
+The time to search for a record is estimated as: ceiling(log 2 b) * (s +rd + btt)
+= ceiling(log 2 1579) * (20+10+1) = 11 * 31 = 341 msec = 0.341 sec
+Slide 13- 50
+50
+
+Problem 4 (Static Hashing)
+A PARTS file with Part# as hash key includes records with the following Part# values:
+ 2369, 3760, 4692, 4871, 5659, 1821, 1074, 7115, 1620, 2428, 3943, 4750, 6975, 4981, 9208.
+ The file uses 8 buckets, numbered 0 to 7. Each bucket is one disk block and holds two records. Load these records into the file in the given order using the hash function h(K)=K mod 8. 
+Calculate the average number of block accesses for a random retrieval on Part#.
+
+Slide 13- 51
+51
+
+Problem 4 (Solution)
+2369 	1       2368 mod 8=1
+3760 	0
+4692 	4
+4871 	7
+5659 	3
+1821 	5
+1074 	2
+7115 	3
+1620 	4
+2428 	4 overflow
+3943 	7
+4750 	6
+6975 	7 overflow
+4981 	5
+ 0
+
+Slide 13- 52
+Two records out of 15 are in overflow, which will require an additional block access. 
+The other records require only one block access. 
+The average time to retrieve a random record is:
+(1 * (13/15)) + (2 * (2/15)) = 0.867 + 0.266 = 1.133 block accesses
+Max two records can stay in one bucket 
+
+Problem 5 (Extendible Hashing)
+Slide 13- 53
+Load the records of Problem1 into expandable hash files based on extendible hashing. 
+
+Show the structure of the directory at each step.
+
+Show the directory at each step, and the global and local depths. 
+
+Use the has function  h(k) = K mod 32.
+
+ Max 2 records can be kept into one bucket
+
+
+53
+
+Problem 5 (Solution)
+Slide 13- 54
+
+Problem 5 (Solution) (Contd.)
+Slide 13- 55
+
+Problem 5 (Solution) (Contd.)
+Slide 13- 56
+
+Problem 5 (Solution) (Contd.)
+Slide 13- 57

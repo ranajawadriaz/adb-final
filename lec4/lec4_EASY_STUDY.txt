@@ -1,0 +1,721 @@
+================================================================================
+    🎯 LECTURE 4 - EASY STUDY GUIDE (ADHD-FRIENDLY) 🎯
+    CONCURRENCY CONTROL TECHNIQUES - LOCKING & TIMESTAMPS
+================================================================================
+
+Hey! This is YOUR exam-ready guide. Everything is explained simply.
+Read section by section. Take breaks between ⭐ symbols if needed!
+
+================================================================================
+📚 PART 1: WHAT IS CONCURRENCY CONTROL?
+================================================================================
+
+🔵 THE GOAL:
+------------
+• Prevent problems when multiple transactions access SAME data
+• Ensure SERIALIZABILITY (results equal to some serial execution)
+• Maintain database CONSISTENCY
+
+🔵 THREE WAYS TO HANDLE CONFLICTS:
+----------------------------------
+1. ALLOW the schedule (if order is correct)
+2. BLOCK/WAIT (put transaction in waiting queue)
+3. ABORT/ROLLBACK (kill the transaction, restart later)
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 2: LOCKING BASICS (Foundation!)
+================================================================================
+
+🔵 WHAT IS A LOCK?
+------------------
+• A LOCK is like a "reservation" on a data item
+• Before you can read or write data, you must GET A LOCK
+• It's like raising your hand before speaking in class!
+
+🔵 BASIC RULES OF LOCKING:
+--------------------------
+1. You MUST lock a data item BEFORE reading or writing it
+2. You CANNOT lock an item that's already locked (by others)
+3. You CANNOT unlock an item that's not locked
+4. Lock and Unlock are ATOMIC operations (instant, can't be interrupted)
+
+🔵 LOCK TABLE:
+--------------
+• The system maintains a TABLE that tracks:
+  - Which data item is locked
+  - Which transaction has the lock
+  - What type of lock (shared/exclusive)
+  
+Example Lock Table:
+┌────────────┬─────────────┬───────────┐
+│ Data Item  │ Transaction │ Lock Type │
+├────────────┼─────────────┼───────────┤
+│ X          │ T1          │ Shared    │
+│ X          │ T2          │ Shared    │
+│ Y          │ T3          │ Exclusive │
+└────────────┴─────────────┴───────────┘
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 3: TYPES OF LOCKS (Very Important!)
+================================================================================
+
+🔵 TWO MAIN LOCK TYPES:
+-----------------------
+
+1. SHARED LOCK (S-Lock / Read Lock)
+   • Used for READING data
+   • MULTIPLE transactions can have shared locks on SAME item
+   • Think: "Many people can READ a library book at once"
+   
+2. EXCLUSIVE LOCK (X-Lock / Write Lock)
+   • Used for WRITING data
+   • ONLY ONE transaction can have exclusive lock
+   • No other locks (shared or exclusive) allowed
+   • Think: "Only ONE person can EDIT a document at a time"
+
+🔵 COMPATIBILITY MATRIX:
+------------------------
+
+╔═══════════════════╦═══════════════╦═══════════════╗
+║ Request →         ║ Shared (S)    ║ Exclusive (X) ║
+║ Current ↓         ║               ║               ║
+╠═══════════════════╬═══════════════╬═══════════════╣
+║ No Lock           ║ ✅ GRANT       ║ ✅ GRANT       ║
+║ Shared (S)        ║ ✅ GRANT       ║ ❌ WAIT        ║
+║ Exclusive (X)     ║ ❌ WAIT        ║ ❌ WAIT        ║
+╚═══════════════════╩═══════════════╩═══════════════╝
+
+MEMORY TRICK: 
+• "Shared-Shared = OK" (Many can read)
+• "Anything with Exclusive = NOT OK" (Writer needs privacy)
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 4: READ COUNT MECHANISM
+================================================================================
+
+🔵 HOW SHARED LOCKS WORK:
+-------------------------
+• System tracks NUMBER OF READERS with a counter
+• read_count(X) = How many transactions are reading X
+
+PROCESS:
+1. T1 wants to read X (no lock exists)
+   → Lock X in shared mode
+   → read_count(X) = 1 ✓
+
+2. T2 wants to read X (shared lock exists)
+   → No new lock needed, just increment counter
+   → read_count(X) = 2 ✓
+
+3. T1 finishes reading, releases lock
+   → read_count(X) = 2 - 1 = 1
+   → Lock NOT released yet (T2 still reading)
+
+4. T2 finishes reading, releases lock
+   → read_count(X) = 1 - 1 = 0
+   → read_count = 0 → UNLOCK X!
+
+🔵 KEY INSIGHT:
+---------------
+• Unlock only happens when read_count reaches ZERO
+• Last reader to leave turns off the lights!
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 5: LOCK UPGRADE AND DOWNGRADE
+================================================================================
+
+🔵 LOCK UPGRADE (Shared → Exclusive):
+------------------------------------
+• Transaction has a SHARED lock and wants to WRITE
+• Needs to UPGRADE to EXCLUSIVE lock
+
+CONDITIONS FOR UPGRADE:
+• The requesting transaction must be THE ONLY reader
+• read_count must be 1 (only itself)
+• If others are also reading → MUST WAIT
+
+Example:
+• T1 has shared lock on X (read_count = 1)
+• T1 wants to write X
+• No other readers → UPGRADE ALLOWED ✅
+
+Example 2:
+• T1 and T2 both have shared locks on X (read_count = 2)
+• T1 wants to write X
+• T2 is still reading → UPGRADE NOT ALLOWED, T1 WAITS ⏳
+
+🔵 LOCK DOWNGRADE (Exclusive → Shared):
+--------------------------------------
+• Transaction has an EXCLUSIVE lock but only wants to READ now
+• Can downgrade to SHARED lock
+• ALWAYS possible (no one else has any lock!)
+• Why do this? To allow others to read!
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 6: TWO-PHASE LOCKING (2PL) - MOST IMPORTANT!
+================================================================================
+
+🔵 WHAT IS 2PL?
+---------------
+The MOST POPULAR concurrency control protocol!
+Every transaction has TWO distinct phases:
+
+PHASE 1: GROWING PHASE (Locking Phase)
+• Transaction can ACQUIRE new locks
+• Transaction CANNOT release any lock
+• Like collecting all the tools you need
+
+PHASE 2: SHRINKING PHASE (Unlocking Phase)  
+• Transaction can RELEASE locks
+• Transaction CANNOT acquire new locks
+• Like returning tools after you're done
+
+🔵 THE GOLDEN RULE:
+-------------------
+"Once you release ONE lock, you can NEVER acquire any NEW lock"
+
+    Growing      │     Shrinking
+    Phase        │     Phase
+                 │
+   ACQUIRE ──────┼──── RELEASE
+   ACQUIRE       │     RELEASE
+   ACQUIRE       │     RELEASE
+                 │
+         ◄───────┴───────►
+              (Boundary)
+
+🔵 WHY DOES 2PL GUARANTEE SERIALIZABILITY?
+------------------------------------------
+• If you hold all your locks before releasing any...
+• No other transaction can interfere in the middle
+• This ensures serializable execution!
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 7: VARIANTS OF TWO-PHASE LOCKING
+================================================================================
+
+🔵 1. BASIC 2PL:
+----------------
+• Follows the two phases: Growing → Shrinking
+• Releases locks during shrinking phase (before commit)
+• CAN cause cascading rollback (dirty reads possible!)
+• CAN cause deadlock
+
+🔵 2. CONSERVATIVE 2PL (Static 2PL):
+------------------------------------
+• Lock ALL required data items BEFORE starting!
+• If you can't get all locks → DON'T START
+• PREVENTS DEADLOCK ✅
+• But: Must know all items in advance (not always possible)
+
+Example:
+T1 needs X, Y, Z
+→ Lock X ✓
+→ Lock Y ✓  
+→ Lock Z ✓
+→ NOW start the transaction
+
+🔵 3. STRICT 2PL (Most Common!):
+--------------------------------
+• Hold all WRITE locks until COMMIT or ABORT
+• Only release write locks AFTER transaction ends
+• May release read locks earlier
+• PREVENTS cascading rollback ✅
+• This is what MOST databases use!
+
+🔵 4. RIGOROUS 2PL:
+-------------------
+• Hold ALL locks (both read and write) until COMMIT or ABORT
+• Don't release ANY lock until you're completely done
+• Most restrictive but SAFEST
+• PREVENTS cascading rollback ✅
+
+🔵 COMPARISON TABLE:
+--------------------
+╔═════════════════════╦══════════════╦═══════════════╦════════════════════╗
+║ Protocol            ║ Deadlock?    ║ Cascading?    ║ When Locks Release ║
+╠═════════════════════╬══════════════╬═══════════════╬════════════════════╣
+║ Basic 2PL           ║ Possible     ║ Possible      ║ During execution   ║
+║ Conservative 2PL    ║ NOT possible ║ Possible      ║ During execution   ║
+║ Strict 2PL          ║ Possible     ║ NOT possible  ║ Write at commit    ║
+║ Rigorous 2PL        ║ Possible     ║ NOT possible  ║ All at commit      ║
+╚═════════════════════╩══════════════╩═══════════════╩════════════════════╝
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 8: DEADLOCK IN 2PL (How It Happens)
+================================================================================
+
+🔵 EXAMPLE OF DEADLOCK IN 2PL:
+------------------------------
+T1 needs X and Y
+T2 needs X and Y
+
+Timeline:
+1. T1 locks X ✓
+2. T2 locks Y ✓
+3. T1 wants Y → WAIT (T2 has it)
+4. T2 wants X → WAIT (T1 has it)
+
+RESULT: DEADLOCK! 
+Both waiting for each other forever!
+
+    T1 ────── wants ──────→ Y (held by T2)
+     ↑                          │
+     │                          │
+     └──────────────────────────┘
+    X (held by T1) ←── wants ── T2
+
+🔵 UPGRADE DEADLOCK:
+--------------------
+T1 has shared lock on X
+T2 has shared lock on X
+T1 wants to upgrade → WAIT for T2
+T2 wants to upgrade → WAIT for T1
+DEADLOCK!
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 9: HANDLING DEADLOCKS
+================================================================================
+
+🔵 METHOD 1: DEADLOCK DETECTION
+-------------------------------
+Let deadlock happen, then fix it!
+
+HOW:
+1. Build a WAIT-FOR GRAPH
+   • Node for each transaction
+   • Edge: Ti → Tj means Ti is waiting for Tj
+   
+2. Check for CYCLES periodically
+   • Cycle = DEADLOCK!
+   
+3. If deadlock found:
+   • Pick a VICTIM transaction
+   • ABORT the victim
+   • Other transactions continue
+
+🔵 METHOD 2: DEADLOCK AVOIDANCE (Wait-Die & Wound-Wait)
+------------------------------------------------------
+Use TIMESTAMPS to avoid deadlock!
+
+TIMESTAMP BASICS:
+• Each transaction has a timestamp (when it started)
+• Smaller timestamp = OLDER transaction (started earlier)
+• Larger timestamp = YOUNGER transaction (started later)
+
+Example:
+• T1 timestamp = 100 (started at time 100)
+• T2 timestamp = 150 (started at time 150)
+• T1 is OLDER, T2 is YOUNGER
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+🔵 WAIT-DIE SCHEME:
+-------------------
+"Older WAITS, Younger DIES"
+
+If Ti wants a resource held by Tj:
+• If Ti is OLDER than Tj → Ti WAITS (patient old person)
+• If Ti is YOUNGER than Tj → Ti DIES (abort) and restarts later
+
+Example:
+• T1 (older) wants resource held by T2 (younger) → T1 WAITS
+• T2 (younger) wants resource held by T1 (older) → T2 DIES
+
+WHY NO DEADLOCK?
+• Older transactions never abort, only wait
+• Younger transactions abort and restart
+• Cycle cannot form!
+
+🔵 WOUND-WAIT SCHEME:
+---------------------
+"Older WOUNDS (kills), Younger WAITS"
+
+If Ti wants a resource held by Tj:
+• If Ti is OLDER than Tj → Ti WOUNDS Tj (aborts Tj) and takes resource
+• If Ti is YOUNGER than Tj → Ti WAITS
+
+Example:
+• T1 (older) wants resource held by T2 (younger) → T1 WOUNDS T2, T2 aborts
+• T2 (younger) wants resource held by T1 (older) → T2 WAITS
+
+WHY NO DEADLOCK?
+• Older transactions are aggressive, push younger out
+• Younger transactions are patient, always wait
+• Cycle cannot form!
+
+🔵 COMPARISON:
+--------------
+╔════════════════╦═══════════════════════════════════════════╗
+║ Scheme         ║ Behavior                                  ║
+╠════════════════╬═══════════════════════════════════════════╣
+║ WAIT-DIE       ║ Older waits, Younger dies (aborts)       ║
+║ WOUND-WAIT     ║ Older wounds (kills younger), Younger waits║
+╚════════════════╩═══════════════════════════════════════════╝
+
+MEMORY TRICK:
+• Wait-DIE: Younger DIEs
+• Wound-WAIT: Younger WAITs
+
+🔵 METHOD 3: DEADLOCK PREVENTION
+--------------------------------
+• Lock ALL resources at START (Conservative 2PL)
+• If can't get all → Don't start
+• No waiting → No deadlock!
+• But: Poor throughput
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 10: TIMESTAMP ORDERING PROTOCOL (Alternative to Locking)
+================================================================================
+
+🔵 BASIC IDEA:
+--------------
+• Don't use locks at all!
+• Use timestamps to order operations
+• Older transactions should be processed first
+
+🔵 TIMESTAMP VARIABLES:
+-----------------------
+For each data item X:
+• read_TS(X) = Timestamp of LAST transaction that READ X
+• write_TS(X) = Timestamp of LAST transaction that WROTE X
+
+🔵 BASIC TIMESTAMP ORDERING RULES:
+----------------------------------
+
+RULE 1: Transaction T wants to READ X
+• If write_TS(X) > TS(T):
+  → A YOUNGER transaction already wrote X
+  → T is trying to read an OLD value
+  → ABORT T! (Too late!)
+  
+• Else: Allow the read
+  → Update read_TS(X) = max(read_TS(X), TS(T))
+
+RULE 2: Transaction T wants to WRITE X
+• If read_TS(X) > TS(T):
+  → A YOUNGER transaction already read X
+  → T would overwrite value they needed
+  → ABORT T!
+  
+• If write_TS(X) > TS(T):
+  → A YOUNGER transaction already wrote X
+  → T's write is outdated
+  → ABORT T!
+  
+• Else: Allow the write
+  → Update write_TS(X) = TS(T)
+
+🔵 EXAMPLE:
+-----------
+Assume TS(T1) = 10, TS(T2) = 20
+
+Item X: read_TS(X) = 0, write_TS(X) = 0
+
+1. T1 wants to read X:
+   • write_TS(X) = 0, TS(T1) = 10
+   • 0 > 10? NO → ALLOW
+   • read_TS(X) = max(0, 10) = 10
+
+2. T2 wants to write X:
+   • read_TS(X) = 10, TS(T2) = 20
+   • 10 > 20? NO → Continue
+   • write_TS(X) = 0, TS(T2) = 20
+   • 0 > 20? NO → ALLOW
+   • write_TS(X) = 20
+
+3. T1 wants to write X:
+   • read_TS(X) = 10, TS(T1) = 10
+   • 10 > 10? NO → Continue  
+   • write_TS(X) = 20, TS(T1) = 10
+   • 20 > 10? YES → ABORT T1! ❌
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 11: THOMAS'S WRITE RULE
+================================================================================
+
+🔵 THE PROBLEM WITH BASIC TO:
+-----------------------------
+If T1 (older) tries to write X after T2 (younger) already wrote X...
+Basic TO would abort T1.
+
+But wait! T1's write doesn't matter anyway!
+T2's write is more recent!
+
+🔵 THOMAS'S WRITE RULE:
+-----------------------
+If write_TS(X) > TS(T):
+• DON'T abort T!
+• Just IGNORE T's write (skip it)
+• Continue with T's other operations
+
+WHY? 
+• T2's write is the "official" value
+• T1's write would be immediately overwritten anyway
+• So just skip it!
+
+This REDUCES unnecessary aborts!
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 12: MULTIVERSION CONCURRENCY CONTROL (MVCC)
+================================================================================
+
+🔵 THE IDEA:
+------------
+• Keep MULTIPLE VERSIONS of each data item
+• Different transactions can see different versions
+• Readers NEVER blocked (always find a version to read!)
+
+🔵 HOW IT WORKS:
+----------------
+Item X has versions: X0, X1, X2, X3...
+
+Each version Xi has:
+• write_TS(Xi) = Timestamp of transaction that created this version
+• read_TS(Xi) = Largest timestamp of transaction that read this version
+
+When T wants to read X:
+• Find version with LARGEST write_TS ≤ TS(T)
+• Read NEVER rejected!
+
+When T wants to write X:
+• May need to create a new version
+• Some restrictions apply (see rules in slides)
+
+🔵 BENEFIT:
+-----------
+• READ operations are NEVER blocked or aborted!
+• Great for read-heavy workloads
+
+🔵 COST:
+--------
+• More STORAGE needed (multiple versions)
+• Need garbage collection to remove old versions
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 13: OPTIMISTIC CONCURRENCY CONTROL (OCC)
+================================================================================
+
+🔵 THE PHILOSOPHY:
+------------------
+"Just do it! Worry about conflicts later."
+
+Assume conflicts are RARE.
+• Let transactions execute without locking
+• Check for conflicts at the END
+• If conflict → abort and restart
+
+🔵 THREE PHASES:
+----------------
+
+PHASE 1: READ PHASE (Working Phase)
+• Transaction reads data items
+• Makes changes in PRIVATE workspace
+• Database NOT modified yet!
+• Tracks READ SET and WRITE SET
+
+PHASE 2: VALIDATION PHASE
+• When transaction wants to commit...
+• Check: Did this conflict with any other transaction?
+• If YES → ABORT
+• If NO → Proceed to write phase
+
+PHASE 3: WRITE PHASE
+• Only reached if validation passed
+• Write all changes to database
+• Commit!
+
+🔵 VALIDATION TYPES:
+--------------------
+
+BACKWARD VALIDATION:
+• Compare with transactions that ALREADY committed
+• Check: Did I read anything they wrote?
+
+FORWARD VALIDATION:
+• Compare with transactions that are STILL active
+• Check: Did I write anything they're reading?
+
+🔵 WHEN IS OCC GOOD?
+--------------------
+• When conflicts are RARE
+• Read-heavy workloads
+• Short transactions
+
+🔵 WHEN IS OCC BAD?
+-------------------
+• When conflicts are FREQUENT
+• A lot of wasted work if validation fails
+• May cause starvation (same transaction keeps aborting)
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 14: GRANULARITY (Lock Size)
+================================================================================
+
+🔵 WHAT IS GRANULARITY?
+-----------------------
+The "size" of what you're locking:
+
+FINE GRANULARITY (Small):
+• Lock a single RECORD or ATTRIBUTE
+• More concurrency (different transactions can access different records)
+• More overhead (many locks to manage)
+
+COARSE GRANULARITY (Large):
+• Lock entire TABLE or DATABASE
+• Less concurrency (one lock blocks many transactions)
+• Less overhead (fewer locks to manage)
+
+🔵 GRANULARITY HIERARCHY:
+-------------------------
+Database (Largest)
+    └── File/Table
+         └── Page/Block
+              └── Record/Row
+                   └── Field/Attribute (Smallest)
+
+🔵 INTENTION LOCKS:
+-------------------
+When using hierarchical locking, use INTENTION LOCKS:
+
+IS (Intention Shared):
+• "I intend to get shared locks on items below"
+
+IX (Intention Exclusive):
+• "I intend to get exclusive locks on items below"
+
+SIX (Shared + Intention Exclusive):
+• "I have shared lock here, but will get exclusive locks below"
+
+🔵 RULES FOR MULTIPLE GRANULARITY:
+----------------------------------
+1. Lock the ROOT (database) first
+2. Before locking a node in S or IS mode → Parent must be IS or IX
+3. Before locking a node in X, IX, or SIX → Parent must be IX or SIX
+4. Follow 2PL (no unlock before all locks acquired)
+5. Unlock in REVERSE order (children before parents)
+
+⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+================================================================================
+📚 PART 15: PRACTICE PROBLEM SOLUTIONS (From Slides)
+================================================================================
+
+🔵 PROBLEM TYPE: Apply Different Protocols to Same Schedule
+-----------------------------------------------------------
+
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3
+
+FOR EACH PROTOCOL, ASK:
+1. Which operations are allowed?
+2. Which transactions wait/abort?
+3. What's the final result?
+
+RIGOROUS 2PL (Wait-Die):
+• T1 gets shared lock on X
+• T2 wants exclusive lock on X → T2 is younger → T2 ABORTS (dies)
+• T3 gets exclusive lock on Y
+• T1 wants exclusive lock on Y → T1 is older → T1 WAITS for T3
+• T3 commits, releases Y
+• T1 gets Y, writes, commits
+• T2 can restart
+
+RIGOROUS 2PL (Wound-Wait):
+• T1 gets shared lock on X
+• T2 wants exclusive lock on X → T2 is younger → T2 WAITS
+• T3 gets exclusive lock on Y
+• T1 wants exclusive lock on Y → T1 is older → T1 WOUNDS T3
+• T3 aborts, releases Y
+• T1 gets Y, writes, commits
+• T2 wakes up, completes, commits
+• T3 can restart
+
+BASIC TIMESTAMP ORDERING:
+• Use read_TS and write_TS
+• Check each operation against timestamp rules
+• Abort if out of order
+
+================================================================================
+🎯 EXAM TIPS FOR LECTURE 4
+================================================================================
+
+1. KNOW THE LOCK COMPATIBILITY MATRIX:
+   • S + S = OK
+   • S + X = NO
+   • X + X = NO
+
+2. UNDERSTAND TWO-PHASE LOCKING:
+   • Growing phase: Acquire locks
+   • Shrinking phase: Release locks
+   • Once you release one, you can't get any new ones!
+
+3. KNOW THE 2PL VARIANTS:
+   • Basic: Releases during execution
+   • Conservative: All locks at start
+   • Strict: Write locks until commit
+   • Rigorous: All locks until commit
+
+4. WAIT-DIE vs WOUND-WAIT:
+   • Wait-Die: Older waits, Younger dies
+   • Wound-Wait: Older wounds, Younger waits
+
+5. TIMESTAMP ORDERING:
+   • Read: Check write_TS
+   • Write: Check both read_TS and write_TS
+   • Younger timestamp already there? → ABORT!
+
+6. KNOW HOW TO SOLVE PROBLEMS:
+   • Add lock/unlock operations to schedule
+   • Identify conflicts
+   • Apply deadlock handling
+   • Determine final result
+
+================================================================================
+✅ QUICK MEMORY TRICKS
+================================================================================
+
+"SHARED = READING = MANY ALLOWED"
+"EXCLUSIVE = WRITING = ONLY ONE"
+
+"2PL = GET FIRST, RELEASE LATER, NEVER BOTH"
+
+"WAIT-DIE = YOUNGER DIES"
+"WOUND-WAIT = YOUNGER WAITS"
+
+"OLDER = SMALLER TIMESTAMP"
+"YOUNGER = LARGER TIMESTAMP"
+
+"CONSERVATIVE = ALL LOCKS AT START = NO DEADLOCK"
+"STRICT = WRITE LOCKS UNTIL COMMIT = NO CASCADE"
+
+"OCC = DO FIRST, CHECK LATER"
+
+================================================================================
+                    💪 YOU GOT THIS! GOOD LUCK! 💪
+================================================================================

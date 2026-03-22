@@ -1,0 +1,517 @@
+
+
+CHAPTER 17
+
+Indexing Structures for Files and Physical Database Design
+
+Introduction
+Indexes used to speed up record retrieval in response to certain search conditions
+Index structures provide secondary access paths
+Any field can be used to create an index
+Multiple indexes can be constructed
+Most indexes based on ordered files
+Tree data structures organize the index
+Slide 17- 2
+
+17.1 Types of Single-Level Ordered Indexes
+Ordered index similar to index in a textbook
+Indexing field (attribute)
+Index stores each value of the index field with list of pointers to all disk blocks that contain records with that field value
+Values in index are ordered
+Slide 17- 3
+
+Types of Single-Level Ordered Indexes (cont’d.)
+Primary index
+Specified on the ordering key field of ordered file of records
+Clustering index
+Used if numerous records can have the same value for the ordering field
+Secondary index
+Can be specified on any nonordering field
+Data file can have several secondary indexes
+Slide 17- 4
+
+Primary Indexes
+Ordered file with two fields
+Primary key, K(i)
+Pointer to a disk block, P(i)
+One index entry in the index file for each block in the data file
+Indexes may be dense or sparse
+Dense index has an index entry for every search key value in the data file
+Sparse index has entries for only some search values
+Slide 17- 5
+
+Primary Indexes (cont’d.)
+Slide 17-6
+Figure 17.1 Primary index on the ordering key field of the file shown in Figure 16.7
+
+Primary Indexes (cont’d.)
+Major problem: insertion and deletion of records
+Move records around and change index values
+Solutions
+Use unordered overflow file
+Use linked list of overflow records
+Slide 17- 7
+
+Clustering Indexes
+Clustering field
+File records are physically ordered on a nonkey field without a distinct value for each record
+Ordered file with two fields
+Same type as clustering field
+Disk block pointer
+Slide 17- 8
+
+Clustering Indexes (cont’d.)
+Slide 17-9
+Figure 17.2 A clustering index on the Dept_number ordering nonkey field of an EMPLOYEE file
+
+Clustering Indexes (cont’d.)
+Slide 17-10
+
+Secondary Indexes
+Provide secondary means of accessing a data file
+Some primary access exists
+Ordered file with two fields
+Indexing field, K(i)
+Block pointer or record pointer, P(i)
+Usually need more storage space and longer search time than primary index
+Improved search time for arbitrary record
+Slide 17- 11
+
+Secondary Indexes (cont’d.)
+Slide 17-12
+Figure 17.4 Dense secondary index (with block pointers) on a nonordering key field of a file.
+
+Secondary Indexes (cont’d.)
+Slide 17-13
+
+Secondary Index                  Cluster Index
+Slide 17-14
+
+Types of Single-Level Ordered Indexes (cont’d.)
+Slide 17-15
+Table 17.1 Types of indexes based on the properties of the indexing field
+Table 17.2 Properties of index types
+
+Example: Indexes as Access Paths 
+Slide 17- 16
+Example: Given the following data file EMPLOYEE(NAME, SSN, ADDRESS, JOB, SAL, ... )
+Suppose that:
+	record size R=150 bytes	block size B=512 bytes	r=30000 records
+
+For an index on the SSN field, assume the field size VSSN=9 bytes, assume the record pointer size PR=7 bytes. Then find cost if:
+A) File records are not ordered
+B) File records are ordered on SSN
+
+Slide 14- 17
+Example: Given the following data file EMPLOYEE(NAME, SSN, ADDRESS, JOB, SAL, ... )
+Suppose that:
+	record size R=150 bytes	block size B=512 bytes	r=30000 records
+Then, we get:
+	blocking factor bfr= B/R= 512/150= 3 records/block
+	number of file blocks b= (r/bfr)= (30000/3)= 10000 blocks
+
+	index entry size Ri=(VSSN+ PR)=(9+7)=16 bytes
+	index blocking factor bfri= B/Ri= 512/16= 32 entries/block
+	number of index blocks bi= (r/ bfri)= (30000/32)= 938 blocks
+	Binary search (on Index) needs: 
+log2bi= log2938 = 10 block accesses (Index Access Cost)
+	This is compared to linear search cost of:
+(b) = 10000 block accesses
+	If the file records are ordered, the binary search cost would be:
+log2b=  log210000= 15 block accesses
+Example: Indexes as Access Paths 
+17
+
+17.2 Multilevel Indexes
+Designed to greatly reduce remaining search space as search is conducted
+Index file
+Considered first (or base level) of a multilevel index
+Second level
+Primary index to the first level
+Third level
+Primary index to the second level
+Slide 17- 18
+
+Slide 17-19
+Figure 17.6 A two-level primary index resembling ISAM (indexed sequential access method) organization
+
+17.3 Dynamic Multilevel Indexes Using B-Trees and B+ -Trees
+Tree data structure terminology
+Tree is formed of nodes
+Each node (except root) has one parent and zero or more child nodes
+Leaf node has no child nodes
+Unbalanced if leaf nodes occur at different levels
+Nonleaf node called internal node
+Subtree of node consists of node and all descendant nodes
+Slide 17- 20
+
+Tree Data Structure
+Slide 17-21
+Figure 17.7 A tree data structure that shows an unbalanced tree
+
+Search Trees and B-Trees
+Search tree used to guide search for a record
+Given value of one of record’s fields
+Slide 17- 22
+Figure 17.8 A node in a search tree with pointers to subtrees below it
+
+Search Trees and B-Trees (cont’d.)
+Algorithms necessary for inserting and deleting search values into and from the tree
+Slide 17- 23
+Figure 17.9 A search tree of order p = 3
+
+B-Trees
+Provide multi-level access structure
+Tree is always balanced
+Space wasted by deletion never becomes excessive
+Each node is at least half-full
+Each node in a B-tree of order p can have at most p-1 search values
+Slide 17- 24
+
+B-Tree Structures
+Slide 17-25
+Figure 17.10 B-tree structures (a) A node in a B-tree with q−1 search values (b) A B-tree of order p=3. The values were inserted in the order 8, 5, 1, 7, 3, 12, 9, 6
+
+B+ -Trees
+Data pointers stored only at the leaf nodes
+Leaf nodes have an entry for every value of the search field, and a data pointer to the record if search field is a key field
+For a nonkey search field, the pointer points to a block containing pointers to the data file records
+Internal nodes
+Some search field values from the leaf nodes repeated to guide search
+Slide 17- 26
+
+B+ -Trees (cont’d.)
+Slide 17-27
+Figure 17.11 The nodes of a B+-tree (a) Internal node of a B+-tree with q−1 search values (b) Leaf node of a B+-tree with q−1 search values and q−1 data pointers
+
+Searching for a Record With Search Key Field Value K, Using a B+ -Tree
+Slide 17- 28
+Algorithm 17.2 Searching for a record with search key field value K, using a B+ -Tree
+
+17.4 Indexes on Multiple Keys
+Multiple attributes involved in many retrieval and update requests
+Consider the query: List the employees in Dno 4 whose Age is 21 (both columns are non-unique).
+Search strategies:
+- Assuming Dno has an index, but Age does not
+- If Age is indexed but Dno is not
+- If indexes have been created on both Dno & Age
+Composite Index Types:
+Ordered Index, Partitioned Hashing, Grid Files
+Slide 17- 29
+
+Indexes on Multiple Keys (cont’d.)
+Ordered Index on Composite keys
+Access structure using key value that combines attributes
+Search keys are stored in sorted order
+Suitable for range queries
+Slide 17- 30
+
+Indexes on Multiple Keys (cont’d.)
+Partitioned hashing
+Is an extension of static external hashing that allows access on composite keys
+Search keys are distributed uniformly across  ‘buckets’ by concatenation of n separate hash addresses
+Suitable for equality comparisons Only
+Mostly use in Data Analytics Applications, not suitable for OLTP Applications
+
+Slide 17- 31
+
+Indexes on Multiple Keys (cont’d.)
+Partitioned hashing…
+E.g. Consider the composite search key <Dno, Age>. If Dno and Age are hashed into a 3-bit and 5-bit address respectively, we get an 8-bit bucket address.
+Suppose that Dno=4 has a hash address ‘100’ and Age=21 has a hash address ‘10101’.
+Then to search for the combined search value, Dno=4 and Age=21, one goes to bucket address 100 10101;
+Just to search for all employees with Age=21, all buckets (8 of them) will be searched whose addresses are ‘000 10101’, ‘001 10101’, …, ‘111 10101’
+Slide 17- 32
+
+Indexes on Multiple Keys (cont’d.)
+Grid files
+Array with one dimension for each search attribute
+Slide 17- 33
+Figure 17.14 Example of a grid array on Dno and Age attributes
+
+17.5 Other Types of Indexes
+Hash indexes
+Bitmap Indexes
+Function-Based Indexing
+Slide 17- 34
+
+Hash Indexes
+
+Secondary structure for file access
+Uses hashing on a search key other than the one used for the primary data file organization
+Index entries of form (K, Pr) or (K, P)
+Pr: pointer to the record containing the key
+P: pointer to the block containing the record for that key
+Slide 17- 35
+
+Hash Indexes - Example
+Slide 17-36
+h(f) = Sum of digits of Emp_id MOD 10
+
+Bitmap Indexes
+Used with a large number of rows
+Useful for columns with a small no of distinct values
+Creates an index for one or more columns
+Each value (or value range) in the column is indexed
+Built on one particular value of a particular field
+Array of bits
+   (Each index contains n bits for a relation with n rows)
+Existence bitmap
+Bitmaps for B+-tree leaf nodes
+Slide 17- 37
+
+Bitmap Indexes - Example
+Slide 17- 38
+Row_id
+Emp_id
+Name
+Sex
+Marital Status
+Salary
+Bitmap Index
+M
+F
+Married
+Single
+Divorced
+0
+51024
+Ahmad
+M
+Divorced
+9500
+1
+0
+0
+0
+1
+1
+23402
+Ayesha
+F
+Single
+6500
+0
+1
+0
+1
+0
+2
+62104
+Ali
+M
+Married
+8200
+1
+0
+1
+0
+0
+3
+34723
+Sehar
+F
+Single
+6200
+0
+1
+0
+1
+0
+4
+81165
+Maria
+F
+Married
+8500
+0
+1
+1
+0
+0
+5
+13646
+Anwar
+M
+Married
+6600
+1
+0
+1
+0
+0
+6
+12676
+Saeed
+M
+Single
+8800
+1
+0
+0
+1
+0
+7
+41301
+Smeera
+F
+Divorced
+9200
+0
+1
+0
+0
+1
+Bitmap Index for Sex and Marital Status Columns
+
+Function-Based Indexing
+Value resulting from applying some function on a field (or fields) becomes the index key
+Introduced in Oracle relational DBMS
+Examples:
+1
+2
+
+Queries:
+Slide 17- 39
+CREATE INDEX income_ix
+ON Employee ( Salary + (Salary * Commission_Pct ) );
+Select First_name, Lname
+FROM Employee
+WHERE ((Salary*Commission_Pct) + Salary) >15000;
+
+Outline
+General issues concerning indexing
+Logical vs Physical Indexes
+Index Creation and Indexing of strings
+Tuning Indexes
+Additional issues related to storage of relations and indexes
+Physical database design in relational databases
+Factors that influence physical database design
+Physical database design decisions
+Slide 17- 40
+
+17.6 Some General Issues Concerning Indexing
+Physical index
+Pointer specifies physical record address
+Disadvantage: pointer must be changed if record is moved
+Logical index
+Used when physical record addresses expected to change frequently
+Entries of the form (K, Kp)
+Slide 17- 41
+
+Index Creation
+General form of the command to create an index
+CREATE [CLUSTERED] [UNIQUE] INDEX <index name>
+ON <table name> (<column name> [<order>] {, <column name> [<order>]})
+
+Unique and clustered keywords optional
+Order can be ASC or DESC
+Secondary indexes can be created for any primary record organization
+Complements other primary access methods
+Slide 17- 42
+
+Index Creation - Example
+Slide 17- 43
+1. CREATE CLUSTERED UNIQUE INDEX SsnIndex 
+    ON employee (Ssn);			-- PI
+
+2. CREATE CLUSTERED INDEX DnoIndex 
+    ON employee (Dno);		 	-- CI
+
+3. CREATE UNIQUE INDEX TaxnoIndex 
+    ON employee (Taxno);			-- SI
+
+4. CREATE INDEX NameIndex 
+    ON employee (Name);			-- SI
+
+
+
+Indexing of Strings
+Strings can be variable length
+Strings may be too long, limiting the fan-out
+Prefix compression
+Stores only the prefix of the search key adequate to distinguish the keys that are being separated and directed to the subtree
+E.g. if Lastname was a search key and we looking for “Abdullah”, the nonLeaf node may contain “Abd” for Abdullah and “Mah” for Mahmood as the two keys on either side of the subtree pointer that we need to follow.
+Slide 17- 44
+
+Tuning Indexes
+Tuning goals
+Dynamically evaluate requirements
+Reorganize indexes to yield best performance
+Reasons for revising initial index choice 
+Certain queries may take too long to run due to lack of an index
+Certain indexes may not get utilized
+Certain indexes may undergo too much updating if based on an attribute that undergoes frequent changes
+Slide 17- 45
+
+Additional Issues Related to Storage of Relations and Indexes
+Enforcing a key constraint on an attribute
+Reject insertion if new record has same key attribute as existing record
+Duplicates occur if index is created on a nonkey field
+Fully inverted file
+Has secondary index on every field
+Indexing hints in queries
+Suggestions used to expedite query execution
+    E.g.
+    SELECT /* + INDEX (employee DnoIndex) */ ssn, salary, dno
+    FROM employee WHERE dno < 10;
+Slide 17- 46
+
+Additional Issues Related to Storage of Relations and Indexes (cont’d.)
+Column-based storage of relations
+Alternative to traditional way of storing relations by row
+Offers advantages for read-only queries
+Offers additional freedom in index creation
+Slide 17- 47
+
+17.7 Physical Database Design in Relational Databases
+Physical design goals
+Create appropriate structure for data in storage
+Guarantee good performance
+Must know job mix for particular set of database system applications
+Analyzing the database queries and transactions
+Information about each retrieval query
+Information about each update transaction
+Slide 17- 48
+
+Physical Database Design in Relational Databases (cont’d.)
+Analyzing the expected frequency of invocation of queries and transactions
+Expected frequency of using each attribute as a selection or join attribute
+80-20 rule: 80 percent of processing accounted for by only 20 percent of queries and transactions
+Analyzing the time constraints of queries and transactions
+Selection attributes associated with time constraints are candidates for primary access structures
+
+Slide 17- 49
+
+Physical Database Design in Relational Databases (cont’d.)
+Analyzing the expected frequency of update operations
+Minimize number of access paths for a frequently-updated file
+Updating the access paths themselves slows down update operations
+Analyzing the uniqueness constraints on attributes
+Access paths should be specified on all candidate key attributes that are either the primary key of a file or unique attributes
+
+Slide 17- 50
+
+Physical Database Design Decisions
+Design decisions about indexing
+Whether to index an attribute
+Attribute is a key or used by a query
+What attribute(s) to index on
+Single or multiple
+Whether to set up a clustered index
+One per table
+Whether to use a hash index over a tree index
+Hash indexes do not support range queries
+Whether to use dynamic hashing
+Appropriate for very volatile files
+Slide 17- 51
+
+17.8 Summary
+Indexes are access structures that improve efficiency of record retrieval from a data file
+Ordered single-level index types
+Primary, clustering, and secondary
+Multilevel indexes can be implemented as B-trees and B+ -trees
+Dynamic structures
+Multiple key access methods
+Logical and physical indexes
+Slide 17- 52

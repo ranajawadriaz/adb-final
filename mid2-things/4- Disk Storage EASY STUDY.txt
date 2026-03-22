@@ -1,0 +1,528 @@
+=====================================================================
+   DISK STORAGE, FILE STRUCTURES, AND HASHING - SUPER EASY VERSION
+=====================================================================
+
+Hey! This file covers how data is PHYSICALLY stored on disks,
+how files are organized, and how hashing helps find data fast.
+
+Think of it like this: your database needs to save data SOMEWHERE.
+That "somewhere" is a disk. This chapter is about HOW it saves
+and finds that data.
+
+
+=====================================================================
+PART 1: DISK STORAGE - How Your Hard Drive Works
+=====================================================================
+
+Think of a DISK like a music record (vinyl).
+
+- A disk has CIRCULAR TRACKS (like grooves on a record)
+- Each track is divided into small pieces called SECTORS
+- Data is stored in BLOCKS (a fixed chunk of bytes)
+
+KEY IDEA: Data moves between disk and RAM in BLOCKS.
+You can't just grab one tiny piece - you grab a whole block.
+
+BLOCK SIZE (B):
+- Usually between 512 bytes to 4096 bytes
+- This is FIXED for a system (you can't change it)
+
+
+HOW A DISK READS DATA:
+-----------------------
+Imagine a record player. To play a song, the needle has to:
+1. MOVE to the right track  -->  This is called SEEK TIME (s)
+2. WAIT for the right part   -->  This is called ROTATIONAL DELAY (rd)
+3. READ the data             -->  This is called TRANSFER TIME (btt)
+
+Total time to read ONE block = s + rd + btt
+
+Example with real numbers:
+  s = 30 ms, rd = 12.5 ms, btt = 1 ms
+  Total = 30 + 12.5 + 1 = 43.5 ms for ONE block
+
+
+DISK ADDRESS:
+- Every block on disk has an address made of 3 parts:
+  1. Cylinder number (which ring of tracks)
+  2. Track/Surface number (which disk surface)
+  3. Block number (which block on that track)
+
+Think of it like: Building number > Floor number > Room number
+
+
+DOUBLE BUFFERING:
+- A trick to speed things up
+- While one block is being processed in memory,
+  the next block is already being read from disk
+- Like a relay race - pass the baton without stopping!
+
+
+=====================================================================
+PART 2: RECORDS AND FILES
+=====================================================================
+
+WHAT IS A RECORD?
+-----------------
+A record = one row of data in your table.
+
+Example: One student record might have:
+  Name: "Ali"    | SSN: 123456789 | Age: 21 | City: "Lahore"
+
+Each piece (Name, SSN, Age, City) is called a FIELD.
+
+
+FIXED vs VARIABLE LENGTH RECORDS:
+----------------------------------
+FIXED LENGTH: Every record is the same size.
+  Example: Name is ALWAYS 30 bytes, SSN is ALWAYS 9 bytes, etc.
+  Easy to work with!
+
+VARIABLE LENGTH: Records can be different sizes.
+  Example: Address could be "Lahore" (6 chars) or
+           "House 42, Street 7, Model Town, Lahore" (39 chars)
+  Needs special markers to know where each field ends.
+
+
+BLOCKING - Fitting Records into Blocks:
+----------------------------------------
+Remember, disk stores data in BLOCKS. So we pack records into blocks.
+
+BLOCKING FACTOR (bfr) = How many records fit in one block
+
+  Formula:  bfr = floor(B / R)
+
+  B = block size, R = record size
+  floor means round DOWN (you can't fit half a record!)
+
+Example:
+  Block size B = 512 bytes, Record size R = 113 bytes
+  bfr = floor(512 / 113) = floor(4.53) = 4 records per block
+
+  So each block holds 4 records. The leftover space is wasted.
+  Wasted space = 512 - (4 x 113) = 512 - 452 = 60 bytes
+
+
+NUMBER OF BLOCKS for the whole file:
+  Formula:  b = ceiling(r / bfr)
+
+  r = total number of records
+  ceiling means round UP (even 1 extra record needs a whole new block!)
+
+Example:
+  r = 20,000 records, bfr = 4
+  b = ceiling(20000 / 4) = 5000 blocks
+
+
+SPANNED vs UNSPANNED:
+----------------------
+UNSPANNED: A record must fit entirely in ONE block.
+  - Simple, but wastes space at end of blocks
+  - Used for FIXED length records
+
+SPANNED: A record CAN be split across TWO blocks.
+  - No wasted space, but more complex
+  - Used for VARIABLE length records
+
+
+=====================================================================
+PART 3: TYPES OF FILES (How Records Are Organized)
+=====================================================================
+
+There are 3 main ways to organize records in a file:
+
+
+1. UNORDERED FILE (Heap File / Pile File)
+------------------------------------------
+Records are just thrown in, one after another. No sorting.
+Like throwing papers into a drawer randomly.
+
+  INSERT: Super fast! Just add at the end.
+  SEARCH: Super slow! You have to check EVERY record.
+          On average, you search HALF the file.
+          Average blocks to search = b/2
+
+  Example: 5000 blocks --> search 2500 blocks on average
+
+
+2. ORDERED FILE (Sequential File)
+-----------------------------------
+Records are sorted by some field (called the ORDERING FIELD).
+Like an alphabetically sorted phone book.
+
+  INSERT: Slow! You have to find the right position.
+  SEARCH: Fast! You can use BINARY SEARCH.
+          Blocks to search = ceiling(log2(b))
+
+  Example: 5000 blocks --> ceiling(log2(5000)) = 13 blocks!
+           That's WAY better than 2500!
+
+  Trick for insertions: Keep a separate "overflow" file for new
+  records, then merge it later.
+
+
+3. HASHED FILE
+---------------
+Uses a magic formula (hash function) to instantly know WHERE
+a record should be stored. Super fast for exact searches!
+(More details below)
+
+
+=====================================================================
+PART 4: SEARCH TIME CALCULATIONS (Very Important for Exam!)
+=====================================================================
+
+Given: s = seek time, rd = rotational delay, btt = block transfer time
+
+CASE 1: Blocks are CONTIGUOUS (next to each other on disk)
+         + Double buffering
+  Time = s + rd + (number_of_blocks x btt)
+
+  Why? You only seek ONCE, then read blocks one after another.
+
+CASE 2: Blocks are NOT contiguous (scattered on disk)
+  Time = number_of_blocks x (s + rd + btt)
+
+  Why? For EACH block, you have to seek, wait, then read.
+
+CASE 3: Binary search (ordered file, blocks NOT contiguous)
+  Time = ceiling(log2(b)) x (s + rd + btt)
+
+
+EXAMPLE (r=20000, R=113, B=512, s=30, rd=12.5, btt=1):
+  bfr = 4, b = 5000
+
+  Linear search (contiguous):
+    s + rd + (2500 x btt) = 30 + 12.5 + 2500 = 2542.5 ms
+
+  Linear search (not contiguous):
+    2500 x (30 + 12.5 + 1) = 2500 x 43.5 = 108,750 ms = 108.75 sec!
+
+  Binary search:
+    13 x 43.5 = 565.5 ms = 0.57 sec
+
+  See the HUGE difference? Binary search is so much faster!
+
+
+TRANSFER RATE AND BULK TRANSFER RATE:
+--------------------------------------
+Transfer rate (tr) = B / btt
+  (How many bytes per millisecond the disk can transfer)
+
+Bulk transfer rate (btr) = tr x (B / (B + G))
+  G = interblock gap size (empty space between blocks on disk)
+
+Example: B=2400, btt=1, G=600
+  tr = 2400/1 = 2400 bytes/ms
+  btr = 2400 x (2400/(2400+600)) = 2400 x 0.8 = 1920 bytes/ms
+
+
+=====================================================================
+PART 5: HASHING - The Fast Way to Find Records
+=====================================================================
+
+WHAT IS HASHING?
+-----------------
+Hashing uses a formula (hash function) to calculate EXACTLY
+which bucket a record goes into. No searching needed!
+
+Think of it like lockers at school:
+  Your locker number = your student ID mod 100
+  Student 12345 --> locker 45 (because 12345 mod 100 = 45)
+  You go DIRECTLY to locker 45. No searching!
+
+
+KEY TERMS:
+- HASH FUNCTION h(K): The formula. Usually h(K) = K mod M
+- HASH KEY: The field used for hashing (like student ID)
+- BUCKET: A storage location (usually one disk block)
+- M: Number of buckets
+
+
+STATIC HASHING (External Hashing):
+------------------------------------
+- Fixed number of buckets (M buckets, numbered 0 to M-1)
+- Each bucket = one disk block
+- To find where record goes: bucket number = h(K) = K mod M
+
+Example: M = 8 buckets, h(K) = K mod 8
+
+  Record with key 2369: 2369 mod 8 = 1 --> goes to bucket 1
+  Record with key 3760: 3760 mod 8 = 0 --> goes to bucket 0
+  Record with key 4692: 4692 mod 8 = 4 --> goes to bucket 4
+
+
+COLLISION:
+----------
+What happens when a bucket is FULL and another record wants to go there?
+That's a COLLISION!
+
+3 ways to handle collisions:
+
+1. OPEN ADDRESSING: Look at the next bucket, then the next,
+   until you find an empty spot.
+   Like: "Locker 5 is full? Try locker 6. Full? Try locker 7..."
+
+2. CHAINING: Use a pointer to link to an overflow area.
+   Like: "Locker 5 is full, but there's a note saying
+   'extra stuff in overflow locker 25'"
+
+3. MULTIPLE HASHING: Try a different hash function.
+   Like: "First formula gave locker 5 (full),
+   second formula gives locker 12 (empty!)"
+
+
+IMPORTANT FACTS about Static Hashing:
+- Keep file only 70-80% full to reduce overflow
+- Hash function should spread records EVENLY across buckets
+- Disadvantage: Fixed M means trouble if file grows or shrinks a lot
+- Cannot do range queries (like "find all IDs between 100-200")
+
+
+EXAMPLE - Static Hashing Problem:
+-----------------------------------
+Given: 15 records, 8 buckets (0-7), max 2 records per bucket
+Hash function: h(K) = K mod 8
+
+Let's load them:
+  2369 mod 8 = 1 --> bucket 1 [2369]
+  3760 mod 8 = 0 --> bucket 0 [3760]
+  4692 mod 8 = 4 --> bucket 4 [4692]
+  4871 mod 8 = 7 --> bucket 7 [4871]
+  5659 mod 8 = 3 --> bucket 3 [5659]
+  1821 mod 8 = 5 --> bucket 5 [1821]
+  1074 mod 8 = 2 --> bucket 2 [1074]
+  7115 mod 8 = 3 --> bucket 3 [5659, 7115] (bucket 3 now full!)
+  1620 mod 8 = 4 --> bucket 4 [4692, 1620] (bucket 4 now full!)
+  2428 mod 8 = 4 --> bucket 4 is FULL! --> OVERFLOW!
+  3943 mod 8 = 7 --> bucket 7 [4871, 3943] (bucket 7 now full!)
+  4750 mod 8 = 6 --> bucket 6 [4750]
+  6975 mod 8 = 7 --> bucket 7 is FULL! --> OVERFLOW!
+  4981 mod 8 = 5 --> bucket 5 [1821, 4981]
+  9208 mod 8 = 0 --> bucket 0 [3760, 9208]
+
+Average block accesses to find a random record:
+  - 13 records in normal buckets (need 1 access each)
+  - 2 records in overflow (need 2 accesses each)
+  Average = (13/15 x 1) + (2/15 x 2) = 0.867 + 0.267 = 1.133
+
+
+=====================================================================
+PART 6: DYNAMIC HASHING - Hashing That Can Grow!
+=====================================================================
+
+Problem with static hashing: bucket count is FIXED.
+What if your file grows way bigger? Too many overflows!
+
+Solution: Dynamic hashing techniques that can GROW and SHRINK.
+
+There are 3 types:
+1. Extendible Hashing
+2. Dynamic Hashing
+3. Linear Hashing
+
+
+EXTENDIBLE HASHING:
+--------------------
+Uses a DIRECTORY (like a table of contents) to point to buckets.
+
+Key concepts:
+- GLOBAL DEPTH (d): How many bits of the hash value the directory uses
+- LOCAL DEPTH: How many bits each individual bucket actually uses
+- Directory size = 2^d (2 raised to the power of d)
+
+How it works:
+1. Compute h(K) and convert to BINARY
+2. Look at the first (or last) 'd' bits
+3. The directory entry for those bits points you to the right bucket
+
+When a bucket overflows:
+- If local depth < global depth:
+  Just SPLIT the bucket into two. Update directory pointers.
+- If local depth = global depth:
+  DOUBLE the directory (increase global depth by 1), then split.
+
+NO OVERFLOW FILES NEEDED! Buckets just split when full.
+
+Example: h(K) = K mod 32, max 2 records per bucket
+  If K = 5: h(5) = 5 = binary 00101
+  If K = 7: h(7) = 7 = binary 00111
+
+  With global depth = 1, we look at last 1 bit:
+    5 (binary ...1) --> directory entry "1"
+    7 (binary ...1) --> directory entry "1"  (same bucket!)
+
+  If that bucket is full, we increase depth and split!
+
+
+DYNAMIC HASHING:
+-----------------
+Similar to extendible hashing but uses a BINARY TREE as the directory
+instead of an array. Each internal node has two children (0 and 1).
+You follow the path based on bits of h(K).
+
+Same idea: split buckets when they overflow, grow the tree.
+
+
+LINEAR HASHING:
+----------------
+Different approach - NO directory at all!
+
+Key concepts:
+- Buckets are split in ORDER (one at a time, in sequence)
+- Uses a SPLIT POINTER (n) to track which bucket to split next
+- Uses a LOAD FACTOR to decide WHEN to split
+  Load factor = number of records / total bucket capacity
+  Split when load factor > threshold (like 0.9)
+
+How it works:
+- Start with M buckets and hash function h0(K) = K mod M
+- When load factor exceeds threshold, split bucket at pointer n
+- Records in that bucket get redistributed using h1(K) = K mod 2M
+- Move pointer to next bucket
+- When all original buckets are split, start over with new M = 2M
+
+Overflow IS allowed (using overflow chains), but splits reduce it.
+
+Example: Start with M=2, load factor threshold=0.9
+  h0 = K mod 2, split pointer n = 0
+
+  Insert 5: h0(5) = 1 --> bucket 1 [5]
+            Load = 1/4 = 0.25 < 0.9, OK
+
+  Insert 7: h0(7) = 1 --> bucket 1 [5, 7]
+            Load = 2/4 = 0.5, but bucket is full!
+            Load = 1.0 > 0.9 --> SPLIT bucket 0!
+            Now use h1 = K mod 4 for bucket 0's records
+            Create new bucket 2
+
+  And so on... each time load factor exceeds threshold, split!
+
+
+=====================================================================
+PART 7: RAID TECHNOLOGY - Making Disks Faster and Safer
+=====================================================================
+
+RAID = Redundant Arrays of Inexpensive Disks
+
+Basic idea: Use MULTIPLE disks together as if they were ONE big disk.
+
+Why? Two reasons:
+1. SPEED: Read/write to multiple disks at the same time (parallelism)
+2. SAFETY: If one disk dies, data is not lost (redundancy)
+
+DATA STRIPING: Spread data across multiple disks.
+  Like dealing cards - give one piece to each disk in turn.
+
+
+RAID LEVELS (Know these!):
+---------------------------
+
+RAID 0 - Striping Only (NO safety)
+  Data split across disks, very FAST
+  But if ONE disk fails, ALL data is LOST!
+  Best write performance, worst safety.
+
+RAID 1 - Mirroring (Full copy)
+  Every disk has an exact COPY (mirror)
+  If one fails, the other has all the data
+  EASIEST to rebuild after failure
+  Used for critical stuff like transaction logs
+  Downside: need DOUBLE the disks!
+
+RAID 2 - Hamming Code
+  Uses special error-detecting codes
+  Can detect AND correct errors
+  Not commonly used today
+
+RAID 3 - Single Parity Disk
+  One extra disk stores "parity" (error-checking info)
+  Good for large data transfers
+  Higher transfer rates than RAID 5
+
+RAID 4 - Block-Level Striping with Parity Disk
+  Like RAID 3 but works at block level
+
+RAID 5 - Block-Level Striping with Distributed Parity
+  Parity spread across ALL disks (not just one)
+  Very popular! Good balance of speed and safety
+
+RAID 6 - Double Parity
+  Can survive TWO disk failures!
+  Uses two extra disks for parity
+
+
+MOST POPULAR RAID LEVELS:
+  RAID 0 (speed, no safety)
+  RAID 1 (mirroring, critical data)
+  RAID 5 (good balance, most common)
+
+
+=====================================================================
+PART 8: STORAGE AREA NETWORKS (SANs)
+=====================================================================
+
+SAN = A high-speed network JUST for storage devices.
+
+Think of it like this:
+- Old way: Each server has its own hard drive attached to it
+- SAN way: All storage is on a separate network, any server can access it
+
+Benefits:
+- Flexible: Add/remove storage without shutting anything down
+- Long distance: Server and storage can be up to 10km apart!
+- Easy to manage: All storage in one place
+
+Problem: Different vendors use different standards (compatibility issues)
+
+
+=====================================================================
+QUICK FORMULA CHEAT SHEET (MUST MEMORIZE!)
+=====================================================================
+
+Record size:       R = sum of all field sizes + deletion marker
+
+Blocking factor:   bfr = floor(B / R)
+
+Number of blocks:  b = ceiling(r / bfr)
+
+Variable record:   For optional fields, multiply size by probability
+                   R = R_fixed + sum of (field_size x probability)
+
+Spanned blocks:    b = ceiling((r x R) / (B - pointer_size))
+
+Linear search time (contiguous):    s + rd + (b/2 x btt)
+Linear search time (non-contiguous): (b/2) x (s + rd + btt)
+Binary search time:                  ceiling(log2(b)) x (s + rd + btt)
+
+Transfer rate:     tr = B / btt
+Bulk transfer:     btr = tr x (B / (B + G))
+
+Hash function:     h(K) = K mod M
+Hash avg access:   (normal_records/total x 1) + (overflow/total x 2)
+
+Wasted space:      B - (R x bfr)
+
+
+=====================================================================
+REMEMBER THESE KEY DIFFERENCES:
+=====================================================================
+
+Unordered File:  INSERT fast, SEARCH slow (linear)
+Ordered File:    INSERT slow, SEARCH fast (binary search)
+Hashed File:     INSERT fast, SEARCH super fast (one access!)
+                 BUT: no range queries, fixed size problems
+
+Static Hashing:  Fixed buckets, needs overflow area
+Extendible:      Directory + buckets, no overflow, directory can double
+Dynamic:         Binary tree directory + buckets, no overflow
+Linear:          No directory, overflow allowed, splits in order
+
+
+=====================================================================
+Good luck on your exam! Remember:
+- Know the formulas and how to plug in numbers
+- Understand the difference between contiguous vs non-contiguous access
+- Know all 3 hashing types and how they handle overflow
+- RAID levels: just remember 0, 1, 3, 5
+=====================================================================

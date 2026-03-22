@@ -1,0 +1,26 @@
+﻿National University of Computer and Emerging Sciences, Lahore Campus 
+Course: Advance Database Concepts Course Code: CS4064 Program: BS Semester: Spring 2026 Out Date: 05-Mar-2026 Total Marks:   
+Due Date: Tue 17-Mar-2026 Weight: 
+Thu 12-Mar-2026 (Start of class) 
+Page(s): 2 
+Assignment: 2 (File Structures & Hashing ) 
+Instructions: • Use any valid assumption where needed. 
+• You are required to submit the soft copy of your assignment at GCR. 
+• For any queries, please contact your TA. 
+Question 1.  
+Consider a file system on a disk with block size B=2048 bytes. A file has r=1,000,000 CUSTOMER records of fixed  length (un-spanned). Each record length is 105 bytes. Assume there are 50 cities and 20,000 customers per city.  Primary key of customer file is customerID.  
+Estimate the number of block fetches needed to compute the following queries: 
+a. SELECT * FROM CUSTOMER WHERE customerID =1122; (Assume file is not ordered) b. SELECT * FROM CUSTOMER WHERE customerID =1515; (Assume file is ordered on customerID) c. SELECT * FROM CUSTOMER WHERE city= ‘Lhr’; (Assume file is not ordered) 
+d. SELECT * FROM CUSTOMER WHERE city= ‘Isb’; (Assume file is ordered on city) 
+Question 2.  
+A customer file has the following customer ID values: 
+(12, 25, 9, 3, 42, 7, 38, 28, 17) 
+a. Consider these customer IDs as hash key values. The file uses 5 buckets named 0 to 4. One bucket cannot  hold more than 2 records, meaning at max a bucket can hold 2 records. Load these records in file using hash  function h(k) = k mod 5, in the given order. 
+b. Calculate the average number of block accesses for random retrieval on customer ID. c. Load the given values in expandable hash files based on extendible hashing, show structure on each step,  use hash function h(k) = K mod 6, max 2 records can be kept in one bucket. (Use most significant bits first  i.e., left to right) 
+d. Load the given values in expandable hash files based on dynamic hashing, show structure on each step, use  hash function h(k) = K mod 6, max 2 records can be kept in one bucket. (Use most significant bits first i.e.,  left to right) 
+e. Load the given values in expandable hash files based on linear hashing, show structure on each step, use  hash function h(k) = K mod 6, max 2 records can be kept in one bucket. 
+f. Show the structure after inserting an entry with customer ID value 14 into the final structure of part (c). g. Show the structure after inserting an entry with customer ID value 19 into the structure of part (f).
+Question 3.  
+Suppose you are building an extendible hash index on a table of 100,000 rows. Key values are 8 bytes, a pointer  (block/record) to a row is 8 bytes, and a disk block is 1024 bytes. Assume all keys are distinct. 
+a. What is the (lowest possible) global depth? Provide valid reasons. 
+b. What is the average occupancy of a bucket, assuming all buckets have a local depth equal to the global  depth from part (a)? Justify your answer.

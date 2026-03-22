@@ -1,0 +1,132 @@
+
+============================================
+   ARIES RECOVERY - EASY CHEAT SHEET
+============================================
+
+ARIES has 3 phases (like 3 steps):
+  1. ANALYSIS  → "figure out what happened"
+  2. REDO      → "replay everything"
+  3. UNDO      → "erase unfinished work"
+
+THE LOG (our story):
+  LSN 11 → begin checkpoint
+  LSN 12 → end checkpoint (tables were empty)
+  LSN 13 → T1 updates P3
+  LSN 14 → T2 updates P2
+  LSN 15 → T1 commits ✅
+  LSN 16 → T3 updates P1
+  LSN 17 → T2 updates P3
+  LSN 18 → T2 commits ✅
+  LSN 19 → T3 updates P2
+  💥 CRASH
+
+
+─────────────────────────────────────────
+(a) MASTER LOG RECORD
+─────────────────────────────────────────
+
+  Master Log Record LSN = 11
+
+  WHY? It always points to the
+  BEGIN checkpoint. Simple.
+
+
+─────────────────────────────────────────
+(b) ANALYSIS PHASE → "Detective Work"
+─────────────────────────────────────────
+
+  STARTS at: LSN 11 (begin checkpoint)
+  ENDS at:   LSN 19 (end of log)
+
+  WHAT IT DOES:
+  Walk through the ENTIRE log,
+  build 2 tables by reading each entry:
+
+  ── Transaction Table ──────────────────
+  (tracks every transaction we see)
+
+   Trans_ID │  LSN  │  Status
+   ─────────┼───────┼──────────
+     T1     │  15   │  commit ✅
+     T2     │  18   │  commit ✅
+     T3     │  19   │  inProcess ⚠️
+   ─────────┴───────┴──────────
+
+   → LSN = the LAST log entry for that transaction
+   → T3 never committed = still "inProcess"
+
+  ── Dirty Page Table ───────────────────
+  (tracks which pages were changed & WHEN first dirtied)
+
+   Page_ID  │  LSN
+   ─────────┼──────
+     P3     │  13    ← first dirtied at LSN 13
+     P2     │  14    ← first dirtied at LSN 14
+     P1     │  16    ← first dirtied at LSN 16
+   ─────────┴──────
+
+   → LSN = the FIRST time that page got dirty
+
+
+─────────────────────────────────────────
+(c) REDO PHASE → "Replay Everything"
+─────────────────────────────────────────
+
+  Begin LSN = 13  (smallest LSN in Dirty Page Table)
+  End LSN   = 19  (end of log)
+
+  WHAT IT DOES:
+  Starting from LSN 13, re-apply ALL updates:
+    LSN 13 → redo T1's update to P3
+    LSN 14 → redo T2's update to P2
+    LSN 16 → redo T3's update to P1
+    LSN 17 → redo T2's update to P3
+    LSN 19 → redo T3's update to P2
+
+  WHY? We don't know what made it to disk
+  before the crash, so replay EVERYTHING
+  to be safe. (Even committed ones!)
+
+
+─────────────────────────────────────────
+(d) UNDO PHASE → "Erase Unfinished Work"
+─────────────────────────────────────────
+
+  Begin LSN = 19  (last action of active transaction)
+  End LSN   = 16  (earliest action of active transaction)
+
+  WHAT IT DOES:
+  Only T3 is "inProcess" (never committed).
+  Walk BACKWARDS through T3's actions:
+    LSN 19 → undo T3's update to P2
+    LSN 16 → undo T3's update to P1
+
+  That's it! T1 and T2 committed,
+  so we leave them alone.
+
+
+─────────────────────────────────────────
+SUPER QUICK MEMORY TRICK 🧠
+─────────────────────────────────────────
+
+  ARIES = 3 phases, always in order:
+
+  1. ANALYSIS (scan log → build 2 tables)
+     starts at BEGIN_CHECKPOINT → goes to END of log
+
+  2. REDO (replay ALL writes)
+     starts at SMALLEST LSN in Dirty Page Table
+     → goes to END of log
+
+  3. UNDO (reverse uncommitted writes)
+     starts at LAST action of active transactions
+     → goes BACKWARDS to their first action
+
+  Think: A-R-U
+    A → Analyze (who did what?)
+    R → Redo    (replay all, forward ▶)
+    U → Undo    (erase unfinished, backward ◀)
+
+============================================
+         GOOD LUCK ON YOUR EXAM! 🍀
+============================================

@@ -1,0 +1,249 @@
+Indexing Structures for Files
+Exercises
+1
+
+Problem Statement (Indexing Structures for Files)
+Consider a disk with block size B=512 bytes. A block pointer is P=6 bytes long, and a record pointer is PR =7 bytes long. A file has r=30,000 EMPLOYEE records of fixed-length. 
+Each record has the following fields: NAME (30 bytes), SSN (9 bytes), DEPARTMENTCODE (9 bytes), ADDRESS (40 bytes), PHONE (9 bytes), BIRTHDATE (8 bytes), SEX (1 byte), JOBCODE (4 bytes), SALARY (4 bytes, real number). An additional byte is used as a deletion marker.
+Problem:
+(a) Calculate the record size R in bytes.
+(b) Calculate the blocking factor bfr and the number of file blocks b assuming an unspanned organization. 
+ 
+
+Slide 14- 2
+
+Problem(c) - Primary Index
+(c) File is ordered by the key field SSN. Construct a primary index on SSN. Calculate 
+
+i) the index blocking factor bfri  
+ii) the number of first-level index entries and the number of first-level index blocks 
+iii) the number of levels needed if we make it into a multi-level index
+iv) the total number of blocks required by the multi-level index 
+v) the number of block accesses needed to search for and retrieve a record from the file--given its SSN value--using the primary index.
+
+Slide 14- 3
+
+Problem(d) - Secondary Index (with Key Field) 
+(d) Suppose the file is not ordered by the key field SSN and we want to construct a secondary index on SSN. Repeat the previous exercise (part c) for the secondary index and compare with the primary index
+
+Slide 14- 4
+
+Problem(e) - Secondary Index (with non-Key Field) 
+(e) Suppose the file is not ordered by the non-key field Department_code and we want to construct a secondary index on Department_code using Option with an extra level of indirection that stores record pointers. Assume there are 1000 distinct values of Department_code, and that the EMPLOYEE records are evenly distributed among these values. Calculate 
+i) the index blocking factor bfri 
+ii) the number of blocks needed by the level of indirection that stores record pointers 
+iii) number of first-level index entries and the number of first-level index blocks
+iv) the number of levels needed if we make it a multi-level index
+v) the total number of blocks required by the multi-level index and the blocks used in the extra level of indirection; 
+vi) the approximate number of block accesses needed to search for and retrieve all records in the file having a specific Department_code value using the index. 
+Slide 14- 5
+
+Problem(f) - Clustering Index 
+(f) Suppose the file is ordered by the non-key field Department_code and we want to construct a clustering index on Department_code that uses block anchors (every new value of Department_code starts at the beginning of a new block). Assume there are 1000 distinct values of Department_code, and that the EMPLOYEE  records are evenly distributed among these values. Calculate
+i) the index blocking factor bfri
+ii) the number of first-level index entries and the number of first-level index blocks
+iii) the number of levels needed if we make it a multi-level index
+iv ) the total number of blocks required by the multi-level index
+v) the number of block accesses needed to search for and retrieve all records in the file having a specific Department_code value using the clustering index (assume that multiple blocks in a cluster are either contiguous or linked by pointers).
+Slide 14- 6
+
+Problem(g) - B+-tree Index 
+(g) Suppose the file is not ordered by the key field Ssn and we want to construct a B+-tree access structure (index) on SSN. Calculate 
+i) the orders p and pleaf of the B+-tree
+ii) the number of leaf-level blocks needed if blocks are approximately 69% full (rounded up for convenience)
+iii) the number of levels needed if internal nodes are also 69% full (rounded up for convenience)
+iv) the total number of blocks required by the B+-tree
+v) the number of block accesses needed to search for and retrieve a record from the file--given its SSN value--using the B+-tree.
+Slide 14- 7
+
+Problem(h) - B-tree Index 
+(h) Repeat part(g), but for a B-tree rather than for a B+-tree. Compare your results for the B-tree and for the B+-tree.
+Slide 14- 8
+
+Problem (Solution)
+(a) Calculate the record size R in bytes.
+Record length R = (30 + 9 + 9 + 40 + 9 + 8 + 1 + 4 + 4) + 1 
+                           = 115 bytes
+
+(b) Calculate the blocking factor bfr and the number of file blocks b assuming an unspanned organization. 
+Blocking factor bfr = floor(B/R) = floor(512/115) = 4 records/block 
+Number of blocks needed for file = ceiling(r/bfr) 
+                                                     = ceiling(30000/4) = 7500
+Slide 14- 9
+
+Problem(c) - Primary Index
+(c) File is ordered by the key field SSN. Construct a primary index on SSN. Calculate 
+
+i) the index blocking factor bfri 
+   Index record size Ri = (V SSN + P) = (9 + 6) = 15 bytes 
+   bfri = fo = floor(B/Ri) = floor(512/15) = 34
+
+ii) the number of first-level index entries and the number of first-level index blocks 
+    r1 = number of file blocks b = 7500 entries
+    b1 = ceiling(r1/bfri) = ceiling(7500/34)= 221 blocks
+
+Slide 14- 10
+
+Problem(c) - Primary Index… 
+iii) the number of levels needed if we make it into a multi-level index
+We can calculate the number of levels as follows:
+      r2 = number of 1st-level index blocks b1 = 221 entries
+     b2 = ceiling(r 2 /bfri ) = ceiling(221/34) = 7 blocks
+     r3 = number of 2nd-level index blocks b2 = 7 entries
+     b3 = ceiling(r 3 /bfri) = ceiling(7/34) = 1
+Since the 3rd level has only one block, it is the top index level.
+Hence, the index has x = 3 levels
+iv) the total number of blocks required by the multi-level index 
+     bi = b1 + b2 + b3 = 221 + 7 + 1 = 229 blocks
+v) the number of block accesses needed to search for and retrieve a record from the file--given its SSN value--using the primary index.
+     = x + 1 = 3 + 1 = 4
+
+
+Slide 14- 11
+
+Problem(d) - Secondary Index (with Key Field)
+(d) Suppose the file is not ordered by the key field SSN and we want to construct a secondary index on SSN. Repeat the previous exercise (part c) for the secondary index and compare with the primary index
+i) the index blocking factor bfri 
+   Index record size Ri = (V SSN + P) = (9 + 6) = 15 bytes 
+   bfri = fo = floor(B/Ri) = floor(512/15) = 34
+
+ii) the number of first-level index entries and the number of first-level index blocks 
+    r1 = number of file records r = 30000 entries
+    b1 = ceiling(r1/bfri ) = ceiling(30000/34) = 883 blocks
+
+Slide 14- 12
+
+iii) the number of levels needed if we make it into a multi-level index
+We can calculate the number of levels as follows:
+     r2 = number of 1st-level index blocks b1 = 883 entries
+     b2 = ceiling(r2 /bfri ) = ceiling(883/34) = 26 blocks
+     r3 = number of 2nd-level index blocks b2 = 26 entries
+     b3 = ceiling(r 3 /bfri) = ceiling(26/34) = 1
+Since the 3rd level has only one block, it is the top index level.
+Hence, the index has x = 3 levels
+iv) the total number of blocks required by the multi-level index 
+     bi = b1 + b2 + b3 = 883 + 26 + 1 = 910
+v) the number of block accesses needed to search for and retrieve a record from the file--given its SSN value--using the secondary index.
+     = x + 1 = 3 + 1 = 4
+Slide 14- 13
+Problem(d) - Secondary Index (with Key Field) …
+
+Problem(e) - Secondary Index (with non-Key Field)
+(e) Suppose the file is not ordered by the non-key field Department_code and we want to construct a secondary index on Department_code using Option with an extra level of indirection that stores record pointers. Assume there are 1000 distinct values of Department_code, and that the EMPLOYEE records are evenly distributed among these values. Calculate 
+i) the index blocking factor bfri 
+   Index record size Ri = (V Department_code + P) = (9 + 6) = 15 bytes 
+   bfri = fo = floor(B/Ri) = floor(512/15) = 34
+
+ii) the number of blocks needed by the level of indirection that stores record pointers 
+    There are 1000 distinct values of Department_code, so the average number of records for each value is (r/1000) = (30000/1000) = 30
+    Since a record pointer size PR = 7 bytes, the number of bytes needed at the level of indirection for each value of Department_code is 7 * 30 =210 bytes, which fits in one block. Hence, 1000 blocks are needed for the level of indirection.
+Slide 14- 14
+
+Problem(e) - Secondary Index (with non-Key Field)...
+iii) number of first-level index entries and the number of first-level index blocks
+     r1= number of distinct values of Department_code = 1000 entries
+     b1 = ceiling(r1 /bfri) = ceiling(1000/34) = 30 blocks
+iv) the number of levels needed if we make it a multi-level index
+We can calculate the number of levels as follows:
+     r2 = number of 1st-level index blocks b1 = 30 entries
+     b2 = ceiling(r2 /bfri ) = ceiling(30/34) = 1 block
+     Hence, the index has x = 2 levels
+v) the total number of blocks required by the multi-level index and the blocks used in the extra level of indirection; 
+    bi = b1 + b2 + b indirection = 30 + 1 + 1000 = 1031 blocks
+vi) the approximate number of block accesses needed to search for and retrieve all records in the file having a specific Department_code value using the index. 
+     = x + 1 + 30 = 33 (assume that the 30 records are distributed over 30 distinct blocks)
+Slide 14- 15
+
+Problem(f) - Clustering Index 
+(f) Suppose the file is ordered by the non-key field Department_code and we want to construct a clustering index on Department_code that uses block anchors (every new value of Department_code starts at the beginning of a new block). Assume there are 1000 distinct values of Department_code, and that the EMPLOYEE  records are evenly distributed among these values. Calculate
+i) the index blocking factor bfri
+   Index record size Ri = (V Department_code + P) = (9 + 6) = 15 bytes 
+   bfri = fo = floor(B/Ri) = floor(512/15) = 34
+ii) the number of first-level index entries and the number of first-level index blocks
+    r1 = number of distinct Department_code values= 1000 entries
+    b1 = ceiling(r1 /bfri ) = ceiling(1000/34) = 30 blocks
+iii) the number of levels needed if we make it a multi-level index
+We can calculate the number of levels as follows:
+     r2 = number of 1st-level index blocks b1 = 30 entries
+     b2 = ceiling(r2 /bfri ) = ceiling(30/34) = 1 block;   Hence, the index has x = 2 levels
+Slide 14- 16
+
+Problem(f) - Clustering Index… 
+iv ) the total number of blocks required by the multi-level index
+      bi = b 1 + b 2 = 30 + 1 = 31 blocks
+v) the number of block accesses needed to search for and retrieve all records in the file having a specific Department_code value using the clustering index (assume that multiple blocks in a cluster are either contiguous or linked by pointers).
+Number of block accesses to search for the first block in the cluster of blocks
+= x + 1 = 2 + 1 = 3
+The 30 records are clustered in ceiling(30/bfr) = ceiling(30/4) = 8 blocks.
+Hence, total block accesses needed on average to retrieve all the records with a given Department_code = x + 8 = 2 + 8 = 10 block accesses
+Slide 14- 17
+
+Problem(g) - B+-tree Index 
+(g) Suppose the file is not ordered by the key field Ssn and we want to construct a B+-tree access structure (index) on SSN. Calculate 
+i) the orders p and pleaf of the B+-tree
+For a B+-tree of order p, the following inequality must be satisfied for each internal tree node: 
+       (p * P) + ((p - 1) * VSSN ) < B,   
+       (p * 6) + ((p - 1) * 9) < 512, which gives 15p <  521, so p=34
+For leaf nodes, assuming that record pointers are included in the leaf nodes, the following inequality must be satisfied: 
+    (pleaf * (VSSN + PR)) + P < B, 
+    (pleaf * (9+7)) + 6 < 512, which gives 16pleaf < 506, so pleaf =31
+
+Slide 14- 18
+
+Problem(g) - B+-tree Index… 
+ii) the number of leaf-level blocks needed if blocks are approximately 69% full (rounded up for convenience)
+    The average number of key values in a leaf node is 
+     0.69*pleaf = 0.69*31 = 21.39. 
+ If we round this up for convenience, we get 22 key values (and 22 record pointers) per leaf node. 
+ Since the file has 30000 records and  hence 30000 values of SSN, the number of leaf-level nodes (blocks) needed is 
+    b1 = ceiling(30000/22) = 1364 blocks
+Slide 14- 19
+
+Problem(g) - B+-tree Index… 
+iii) the number of levels needed if internal nodes are also 69% full (rounded up for convenience)
+We can calculate the number of levels as follows:
+ The average fan-out for the internal nodes is 
+      fo = ceiling(0.69*p) = ceiling(0.69*34) = ceiling(23.46) = 24
+number of 2nd-level tree blocks b2 = ceiling(b1 /fo) = ceiling(1364/24) = 57 blocks
+number of 3rd-level tree blocks b3 = ceiling(b2 /fo) = ceiling(57/24)= 3
+number of 4th-level tree blocks b4 = ceiling(b3 /fo) = ceiling(3/24) = 1
+Since the 4th level has only one block, the tree has x = 4 levels (counting the leaf level).
+Note: We could use the formula:
+               x = ceiling(logfo (b1 )) + 1 = ceiling(log24 1364) + 1 = 3 + 1 = 4 levels
+iv) the total number of blocks required by the B+-tree
+bi = b1 + b2 + b3 + b4 = 1364 + 57 + 3 + 1 = 1425 blocks
+v) the number of block accesses needed to search for and retrieve a record from the file--given its SSN value--using the B+-tree.
+    = x + 1 = 4 + 1 = 5 blocks
+Slide 14- 20
+
+Problem(h) - B-tree Index 
+(h) Repeat part g, but for a B-tree rather than for a B+-tree. Compare your results for the B-tree and for the B+-tree.
+i) the orders p of the B-tree
+For a B-tree of order p, following inequality must be satisfied for each tree node:
+	(p * P) + ((p - 1) * (V SSN + PR)) < B, 
+     (p * 6) + ((p - 1) * (9+7)) < 512, which gives 22p <  528, so p=24
+ii) the number of leaf-level blocks needed if blocks are approximately 69% full (rounded up for convenience)
+    The average number of key values in a leaf node is 
+     0.69*p = 0.69*24 = 16.56. 
+ If we round this up for convenience, we get 17 key values (and 17 record pointers) per leaf node. 
+ Since the file has 30000 records and  hence 30000 values of SSN, the number of leaf-level nodes (blocks) needed is 
+    b1 = ceiling(30000/17) = 1765 blocks
+Slide 14- 21
+
+Problem(h) - B-tree Index… 
+iii) the number of levels needed if internal nodes are also 69% full (rounded up for convenience)
+We can calculate the number of levels as follows:
+ The average fan-out for the internal nodes is 
+      fo = ceiling(0.69*p) = ceiling(0.69*24) = ceiling(16.56) = 17
+number of 2nd-level tree blocks b2 = ceiling(b1 /fo) = ceiling(1765/17) = 104 blocks
+number of 3rd-level tree blocks b3 = ceiling(b2 /fo) = ceiling(104/17)= 7
+number of 4th-level tree blocks b4 = ceiling(b3 /fo) = ceiling(7/17) = 1
+Since the 4th level has only one block, the tree has x = 4 levels (counting the leaf level). 
+Note: We could use the formula:
+               x = ceiling(logfo (b1 )) + 1 = ceiling(log17 1765) + 1 = 3 + 1 = 4 levels
+iv) the total number of blocks required by the B-tree
+bi = b1 + b2 + b3 + b4 = 1765 + 104 + 7 + 1 = 1877 blocks
+v) the number of block accesses needed to search for and retrieve a record from the file--given its SSN value--using the B-tree.
+    = x + 1 = 4 + 1 = 5 blocks
+
+Slide 14- 22

@@ -1,0 +1,306 @@
+=====================================================================
+   ASSIGNMENT 2 - FILE STRUCTURES & HASHING (EASY VERSION)
+=====================================================================
+
+This is the Assignment 2 explained step by step.
+I'll show you HOW to think about each question.
+
+
+=====================================================================
+QUESTION 1: Block Fetches for Different Queries
+=====================================================================
+
+GIVEN:
+- Block size B = 2048 bytes
+- r = 1,000,000 CUSTOMER records (1 million!)
+- Record length R = 105 bytes (fixed, unspanned)
+- 50 cities, 20,000 customers per city
+- Primary key = customerID
+
+STEP 1: Always calculate these first!
+
+  bfr = floor(B / R) = floor(2048 / 105) = 19 records per block
+  b = ceiling(r / bfr) = ceiling(1,000,000 / 19) = 52,632 blocks
+
+
+QUERY (a): SELECT * FROM CUSTOMER WHERE customerID = 1122
+           (File is NOT ordered)
+-------------------------------------------------------------
+
+What's happening: "Find the customer with ID 1122"
+File is NOT ordered, so we can't use binary search.
+customerID is the PRIMARY KEY, so there's only ONE matching record.
+
+Method: LINEAR SEARCH on unordered file
+- On average, we search HALF the file before finding it
+- Block fetches = b/2 = 52,632 / 2 = 26,316
+
+Answer: 26,316 block fetches
+
+Think of it like: Looking for a specific card in a shuffled deck.
+You have to flip through cards one by one.
+
+
+QUERY (b): SELECT * FROM CUSTOMER WHERE customerID = 1515
+           (File IS ordered on customerID)
+-------------------------------------------------------------
+
+What's happening: Same thing, but now file IS sorted by customerID!
+Since it's sorted, we can use BINARY SEARCH.
+
+Method: BINARY SEARCH
+- Block fetches = ceiling(log2(b)) = ceiling(log2(52632))
+- log2(52632) = about 15.68
+- ceiling(15.68) = 16
+
+Answer: 16 block fetches
+
+WOW! From 26,316 down to 16! That's the power of binary search.
+
+
+QUERY (c): SELECT * FROM CUSTOMER WHERE city = 'Lhr'
+           (File is NOT ordered)
+-------------------------------------------------------------
+
+What's happening: "Find ALL customers in Lahore"
+File is NOT ordered. city is NOT the key.
+20,000 customers are in Lahore.
+
+Method: LINEAR SEARCH - must scan ENTIRE file
+- We can't stop early because there might be more Lahore customers
+  scattered anywhere in the file
+- Block fetches = b = 52,632
+
+Answer: 52,632 block fetches
+
+Why the WHOLE file? Because records are not sorted by city,
+Lahore customers could be anywhere!
+
+
+QUERY (d): SELECT * FROM CUSTOMER WHERE city = 'Isb'
+           (File IS ordered on city)
+-------------------------------------------------------------
+
+What's happening: "Find ALL customers in Islamabad"
+File IS sorted by city. 20,000 customers per city.
+
+Method: BINARY SEARCH to find first Islamabad record,
+        then read all consecutive blocks with Islamabad records
+
+- Binary search cost = ceiling(log2(b)) = 16 block accesses
+- Number of Islamabad records = 20,000
+- These records occupy: ceiling(20,000 / 19) = 1,053 blocks
+- After finding the first one, read remaining: 1,053 - 1 = 1,052
+
+Answer: 16 + 1,052 = 1,068 block fetches
+(or approximately: log2(b) + s/bfr - 1 where s = 20,000)
+
+Much better than scanning all 52,632 blocks!
+
+
+=====================================================================
+QUESTION 2: Static Hashing, Extendible, Dynamic, Linear
+=====================================================================
+
+GIVEN:
+- Customer IDs: (12, 25, 9, 3, 42, 7, 38, 28, 17)
+- 5 buckets (0 to 4), max 2 records per bucket
+
+
+PART (a): Static Hashing with h(K) = K mod 5
+----------------------------------------------
+
+Let's compute where each record goes:
+
+  12 mod 5 = 2 --> bucket 2
+  25 mod 5 = 0 --> bucket 0
+  9 mod 5 = 4  --> bucket 4
+  3 mod 5 = 3  --> bucket 3
+  42 mod 5 = 2 --> bucket 2 (bucket 2 now has: 12, 42)
+  7 mod 5 = 2  --> bucket 2 FULL! --> OVERFLOW
+  38 mod 5 = 3 --> bucket 3 (bucket 3 now has: 3, 38)
+  28 mod 5 = 3 --> bucket 3 FULL! --> OVERFLOW
+  17 mod 5 = 2 --> bucket 2 FULL! --> OVERFLOW
+
+Result:
+  Bucket 0: [25]
+  Bucket 1: [empty]
+  Bucket 2: [12, 42]    overflow: [7, 17]
+  Bucket 3: [3, 38]     overflow: [28]
+  Bucket 4: [9]
+
+
+PART (b): Average block accesses for random retrieval
+------------------------------------------------------
+
+Count the records by how many accesses they need:
+- Records in main buckets (1 access): 25, 12, 42, 9, 3, 38 = 6 records
+- Records in 1st overflow (2 accesses): 7, 28 = 2 records
+  (need to read main bucket + 1 overflow block)
+- Records in 2nd overflow (2 accesses): 17 = 1 record
+  (this depends on how overflow is organized)
+
+If using chaining (linked overflow):
+  Records at depth 1: 6 records --> 1 access each
+  Records at depth 2: 2 records --> 2 accesses each
+  Records at depth 3: 1 record --> 3 accesses
+
+Average = (6x1 + 2x2 + 1x3) / 9 = (6 + 4 + 3) / 9 = 13/9 = 1.44
+
+Or if overflow is organized differently, the answer may vary.
+The key idea: more overflow = more block accesses = slower!
+
+
+PART (c): Extendible Hashing with h(K) = K mod 6 (MSB first)
+--------------------------------------------------------------
+
+First compute hash values (mod 6) and convert to binary:
+  12 mod 6 = 0 = 000
+  25 mod 6 = 1 = 001
+  9 mod 6 = 3  = 011
+  3 mod 6 = 3  = 011
+  42 mod 6 = 0 = 000
+  7 mod 6 = 1  = 001
+  38 mod 6 = 2 = 010
+  28 mod 6 = 4 = 100
+  17 mod 6 = 5 = 101
+
+MSB = Most Significant Bit = leftmost bit
+
+Start: global depth 1, directory [0, 1]
+  Bucket for 0: records whose first bit = 0
+  Bucket for 1: records whose first bit = 1
+
+Insert 12 (000): first bit=0 --> bucket 0 [12]
+Insert 25 (001): first bit=0 --> bucket 0 [12, 25] FULL
+Insert 9 (011):  first bit=0 --> bucket 0 OVERFLOW!
+
+SPLIT! Increase global depth to 2.
+Directory: [00, 01, 10, 11]
+Redistribute using 2 bits:
+  12 (000): first 2 bits=00 --> bucket 00
+  25 (001): first 2 bits=00 --> bucket 00
+  9 (011):  first 2 bits=01 --> bucket 01
+
+  bucket 00: [12, 25] FULL
+  bucket 01: [9]
+  bucket 10, 11: empty (or pointing to shared empty bucket)
+
+Insert 3 (011): first 2 bits=01 --> bucket 01 [9, 3] FULL
+
+Insert 42 (000): first 2 bits=00 --> bucket 00 [12, 25] OVERFLOW!
+
+SPLIT bucket 00! Increase global depth to 3.
+Directory: [000, 001, 010, 011, 100, 101, 110, 111]
+Redistribute bucket 00 using 3 bits:
+  12 (000): first 3 bits=000 --> bucket 000
+  25 (001): first 3 bits=001 --> bucket 001
+  42 (000): first 3 bits=000 --> bucket 000
+
+  bucket 000: [12, 42]
+  bucket 001: [25]
+  bucket 010, 011 --> [9, 3]  (local depth 2)
+  ...continue inserting remaining records
+
+Insert 7 (001): first 3 bits=001 --> bucket 001 [25, 7] FULL
+Insert 38 (010): first 3 bits=010 --> bucket 010... need to check
+Insert 28 (100): first 3 bits=100 --> bucket 100 [28]
+Insert 17 (101): first 3 bits=101 --> bucket 101 [17]
+
+(The exact final structure depends on whether more splits are needed.
+Show each step with the directory and bucket contents.)
+
+
+PART (d): Dynamic Hashing
+---------------------------
+Same as extendible hashing but use a BINARY TREE as directory.
+
+- Start with root pointing to one bucket
+- When bucket overflows, split the tree node
+- Left child = 0, Right child = 1
+- Follow bits left-to-right to find the bucket
+
+Same hash values, same splits, just drawn as a tree
+instead of an array.
+
+
+PART (e): Linear Hashing
+--------------------------
+Start: M = 6 buckets (0-5), max 2 records per bucket
+h0 = K mod 6, split pointer n = 0
+
+Insert records one by one:
+  12 mod 6 = 0 --> bucket 0 [12]
+  25 mod 6 = 1 --> bucket 1 [25]
+  9 mod 6 = 3  --> bucket 3 [9]
+  3 mod 6 = 3  --> bucket 3 [9, 3] FULL
+  42 mod 6 = 0 --> bucket 0 [12, 42] FULL
+  7 mod 6 = 1  --> bucket 1 [25, 7] FULL
+
+Check load factor after each insert:
+  Load = records / (buckets x capacity)
+  When load > threshold: SPLIT bucket at pointer n
+  Redistribute using h1 = K mod 12 (2 x M)
+
+  After splitting all M buckets, M doubles to 12.
+
+
+PART (f) and (g): Inserting into final extendible hash structure
+-----------------------------------------------------------------
+After building the structure in (c):
+- Insert 14: compute h(14) = 14 mod 6 = 2 = binary 010
+  Look at first 'd' bits (d = global depth) to find bucket
+  Add to that bucket. If overflow, split!
+
+- Insert 19: compute h(19) = 19 mod 6 = 1 = binary 001
+  Same process. Add to bucket, split if needed.
+
+
+=====================================================================
+QUESTION 3: Extendible Hash Index Size
+=====================================================================
+
+GIVEN:
+- 100,000 rows
+- Key = 8 bytes, Pointer = 8 bytes
+- Block size B = 1024 bytes
+- All keys distinct
+
+(a) Lowest possible global depth?
+
+Each bucket entry = 8 + 8 = 16 bytes
+Entries per bucket = floor(1024 / 16) = 64
+
+Minimum buckets needed = ceiling(100,000 / 64) = 1,563
+
+Directory must be power of 2:
+  2^10 = 1024 (too small, 1024 < 1563)
+  2^11 = 2048 (enough! 2048 >= 1563)
+
+Answer: Global depth = 11
+
+(b) Average occupancy?
+
+If all local depths = 11, then 2048 unique buckets.
+Total capacity = 2048 x 64 = 131,072
+Occupancy = 100,000 / 131,072 = 76.3%
+
+
+=====================================================================
+TIPS FOR SOLVING THESE PROBLEMS IN EXAM:
+=====================================================================
+
+1. ALWAYS start by calculating bfr and b. Write them down first!
+
+2. For "file not ordered" queries: LINEAR SEARCH = b/2 (if key) or b (if non-key)
+
+3. For "file ordered on X" + query on X: BINARY SEARCH = log2(b)
+
+4. For "file ordered on X" + query on Y (different field): LINEAR = b
+
+5. For hashing problems: SHOW YOUR WORK for each insertion step
+
+6. Extendible hashing: always show directory + bucket contents + depths
+
+7. Load factor = records / capacity (not records / buckets)
+=====================================================================

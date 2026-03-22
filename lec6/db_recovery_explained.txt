@@ -1,0 +1,99 @@
+
+============================================
+   DATABASE RECOVERY - EASY CHEAT SHEET
+   (Undo/Redo with Checkpointing)
+============================================
+
+SETUP:  X=50, Y=100, Z=150 (starting values)
+        5 transactions, system crashes at step 22
+        Checkpoint happens at step 14
+
+
+─────────────────────────────────────────
+STEP 1 ➜ WHO NEEDS WHAT? (The Big Picture)
+─────────────────────────────────────────
+
+Think of it like a restaurant kitchen:
+  - Some orders were FULLY cooked & served  ➜ REDO them (make sure they stick)
+  - Some orders were HALF cooked            ➜ UNDO them (throw them out)
+  - Some orders were done BEFORE closing    ➜ IGNORE them (already safe)
+
+
+─────────────────────────────────────────
+STEP 2 ➜ SORT THE TRANSACTIONS
+─────────────────────────────────────────
+
+  ✅ T2 → committed BEFORE checkpoint
+         → IGNORE IT. Already safe. Done. Bye.
+
+  ✅ T3, T5 → committed AFTER checkpoint
+         → REDO these (re-apply their writes)
+
+  ❌ T1, T4 → were still running when crash happened (never committed)
+         → UNDO these (reverse their writes)
+
+
+  HOW TO KNOW?
+  - "commit" in the log = committed ✅
+  - No "commit" before crash = not committed ❌
+  - T2 committed at step 8 (before checkpoint at 14) → ignore
+  - T3 committed at step 15 (after checkpoint) → redo
+  - T5 committed at step 21 (after checkpoint) → redo
+  - T1 never committed → undo
+  - T4 never committed → undo
+
+
+─────────────────────────────────────────
+STEP 3 ➜ REDO (replay the good stuff)
+─────────────────────────────────────────
+
+  Only re-apply WRITE operations of T3 and T5
+  Go TOP to BOTTOM through log:
+
+    1. write_item(T3, Z, 125)     → Z becomes 125
+    2. write_item(T5, Z, 110)     → Z becomes 110
+
+
+─────────────────────────────────────────
+STEP 4 ➜ UNDO (erase the bad stuff)
+─────────────────────────────────────────
+
+  Reverse WRITE operations of T1 and T4
+  Go BOTTOM to TOP through log:
+
+    1. write_item(T1, X, 25)      → X goes back to 25
+                                     (wait, this IS the old value)
+
+  T1 wrote X=25 at step 10, so undo puts X back.
+  T4 had no writes that stuck.
+
+
+─────────────────────────────────────────
+STEP 5 ➜ FINAL VALUES AFTER RECOVERY
+─────────────────────────────────────────
+
+    ┌──────────┬──────────┐
+    │  ITEM    │  VALUE   │
+    ├──────────┼──────────┤
+    │  X       │   25     │
+    │  Y       │  125     │
+    │  Z       │  110     │
+    └──────────┴──────────┘
+
+
+─────────────────────────────────────────
+SUPER QUICK MEMORY TRICK 🧠
+─────────────────────────────────────────
+
+  1. Find the CHECKPOINT in the log
+  2. Committed BEFORE checkpoint? → SKIP
+  3. Committed AFTER checkpoint?  → REDO (replay writes, top→bottom)
+  4. Never committed?             → UNDO (reverse writes, bottom→top)
+  5. Apply changes → get final values
+
+  REDO  = "do it again"   (for committed ones)
+  UNDO  = "never happened" (for uncommitted ones)
+
+============================================
+         GOOD LUCK ON YOUR EXAM! 🍀
+============================================

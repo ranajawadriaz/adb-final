@@ -1,0 +1,515 @@
+=====================================================================
+   INDEXING STRUCTURES FOR FILES - SUPER EASY VERSION
+=====================================================================
+
+WHAT IS AN INDEX?
+------------------
+Think of the INDEX at the back of a textbook.
+Instead of reading the entire book to find "B-Tree",
+you look at the index: "B-Tree... page 245" and go directly there!
+
+A DATABASE INDEX works the same way:
+- Instead of scanning the ENTIRE file (millions of records)
+- You look up the index, which tells you EXACTLY which block to go to
+- Much faster!
+
+An index is a SEPARATE FILE that has two columns:
+  1. The value you're looking for (called the INDEX FIELD)
+  2. A pointer to where that record is on disk
+
+
+=====================================================================
+PART 1: THREE TYPES OF SINGLE-LEVEL INDEXES
+=====================================================================
+
+There are 3 types. The type depends on:
+- Is the data file sorted or not?
+- Is the index field a KEY (unique) or NON-KEY (duplicates allowed)?
+
+
+TYPE 1: PRIMARY INDEX
+-----------------------
+WHEN: File is SORTED by a KEY field (every value is unique)
+WHAT: One index entry per BLOCK (not per record!)
+
+Example:
+  Your file has student records sorted by StudentID.
+  Block 1 has students 101-104
+  Block 2 has students 105-108
+  Block 3 has students 109-112
+
+  Primary Index:
+    101 --> Block 1
+    105 --> Block 2
+    109 --> Block 3
+
+  Only 3 index entries for 12 records! (one per block)
+  This is called a SPARSE INDEX (not every record has an entry)
+
+KEY FACTS:
+- SPARSE: One entry per block (not per record)
+- Number of index entries = number of data file blocks = b
+- File MUST be sorted on the key field
+- Problem: Inserting/deleting records is expensive
+  (because you might need to shift records around)
+
+
+TYPE 2: CLUSTERING INDEX
+--------------------------
+WHEN: File is SORTED by a NON-KEY field (values can repeat!)
+WHAT: One index entry per DISTINCT VALUE of the field
+
+Example:
+  Employee file sorted by Department (Dept can repeat):
+  Block 1: [Dept 1, Dept 1, Dept 1, Dept 2]
+  Block 2: [Dept 2, Dept 2, Dept 3, Dept 3]
+  Block 3: [Dept 3, Dept 3, Dept 3, Dept 4]
+
+  Clustering Index:
+    Dept 1 --> Block 1
+    Dept 2 --> Block 1 (or Block 2, where Dept 2 starts fresh)
+    Dept 3 --> Block 2
+    Dept 4 --> Block 3
+
+  One entry per UNIQUE department value.
+
+KEY FACTS:
+- SPARSE: One entry per distinct value
+- Number of index entries = number of distinct values
+- "Block anchors": Each new value starts at beginning of a new block
+- Records with same value are CLUSTERED together (stored near each other)
+
+
+TYPE 3: SECONDARY INDEX
+--------------------------
+WHEN: File is NOT sorted by the index field
+       (The field you want to search is NOT the sorting field)
+WHAT: Works on ANY field, but needs MORE entries
+
+Two sub-cases:
+
+(a) Secondary Index on a KEY field (unique values):
+  - DENSE: One entry for EVERY record in the file!
+  - Number of index entries = r (total records)
+  - More entries than primary index, but still way faster than linear search
+
+(b) Secondary Index on a NON-KEY field (values repeat):
+  - Uses an EXTRA LEVEL OF INDIRECTION
+  - Index points to a block of record pointers
+  - Those pointers point to actual records scattered in the file
+
+  Example:
+    Index entry: Dept 3 --> [pointer to pointer block]
+    Pointer block: [ptr to record 1, ptr to record 2, ptr to record 3...]
+    Each pointer leads to a different data block.
+
+KEY FACTS:
+- DENSE (for key fields): One entry per record
+- File does NOT need to be sorted on this field
+- More storage needed than primary/clustering index
+- But very useful for searching on non-ordering fields!
+
+
+=====================================================================
+COMPARISON TABLE (Important!)
+=====================================================================
+
+                    | Primary     | Clustering  | Secondary
+--------------------|-------------|-------------|-------------
+File sorted on      | Yes (key)   | Yes (non-key)| No
+this field?         |             |             |
+Dense or Sparse?    | Sparse      | Sparse      | Dense
+# of index entries  | b (blocks)  | distinct    | r (records)
+                    |             | values      | or distinct values
+Can have multiple?  | No (only 1) | No (only 1) | Yes (many!)
+Data file ordered?  | Yes         | Yes         | Doesn't matter
+
+
+=====================================================================
+PART 2: INDEX SIZE CALCULATIONS (Very Important!)
+=====================================================================
+
+FORMULAS YOU NEED:
+
+Index entry size:  Ri = V (field size) + P (pointer size)
+
+Index blocking factor: bfri = floor(B / Ri)
+  (how many index entries fit in one block)
+
+Number of index blocks: bi = ceiling(number_of_entries / bfri)
+
+Search cost with index: log2(bi) + 1
+  (binary search on index blocks + 1 to read the actual data block)
+
+
+EXAMPLE:
+  Record size R=150, Block B=512, r=30,000 records
+  SSN field size = 9 bytes, Record pointer PR = 7 bytes
+
+  Data file:
+    bfr = floor(512/150) = 3 records/block
+    b = ceiling(30000/3) = 10,000 blocks
+
+  WITHOUT index (linear search): 10,000 block accesses!
+
+  WITH secondary index on SSN:
+    Ri = 9 + 7 = 16 bytes
+    bfri = floor(512/16) = 32 entries/block
+    bi = ceiling(30000/32) = 938 index blocks
+    Search = ceiling(log2(938)) = 10 block accesses for index
+    Total = 10 + 1 = 11 block accesses
+
+  10,000 vs 11! Indexes are AMAZING!
+
+  WITH primary index on SSN (file ordered):
+    Primary index has b entries (one per block)
+    bi = ceiling(10000/32) = 313 index blocks... wait, actually:
+    BUT we could also just binary search the data file:
+    log2(10000) = 14 block accesses
+    The index is still faster at about 10!
+
+
+=====================================================================
+PART 3: MULTILEVEL INDEXES
+=====================================================================
+
+Problem: Even the index file can be HUGE. Searching it is slow.
+
+Solution: Build an INDEX on top of the INDEX!
+
+Level 1: The original index (base level)
+Level 2: An index of the Level 1 blocks
+Level 3: An index of the Level 2 blocks
+... keep going until the top level fits in ONE block!
+
+HOW TO CALCULATE LEVELS:
+
+Start with Level 1:
+  r1 = number of entries at level 1
+  b1 = ceiling(r1 / bfri)
+
+Level 2:
+  r2 = b1 (one entry per block from previous level)
+  b2 = ceiling(r2 / bfri)
+
+Level 3:
+  r3 = b2
+  b3 = ceiling(r3 / bfri)
+
+STOP when bx = 1 (fits in one block). That's the top level!
+
+Total levels = x
+Block accesses to search = x + 1 (x for index + 1 for data)
+Total index blocks = b1 + b2 + b3 + ...
+
+
+EXAMPLE (Primary Index on SSN, 30,000 records):
+  bfri = 34 entries per index block
+
+  Level 1: r1 = 7500 entries (one per data block)
+           b1 = ceiling(7500/34) = 221 blocks
+  Level 2: r2 = 221
+           b2 = ceiling(221/34) = 7 blocks
+  Level 3: r3 = 7
+           b3 = ceiling(7/34) = 1 block  <-- TOP!
+
+  Levels = 3
+  Block accesses = 3 + 1 = 4 (3 index + 1 data)
+  Total index blocks = 221 + 7 + 1 = 229
+
+
+=====================================================================
+PART 4: B-TREES AND B+-TREES
+=====================================================================
+
+Multilevel indexes have a problem: when you insert/delete,
+you have to reorganize ALL levels. Expensive!
+
+B-Trees and B+-Trees solve this. They are SELF-BALANCING trees
+that automatically stay organized.
+
+
+B-TREE:
+--------
+Think of it as a tree where:
+- Every node can hold multiple keys (values)
+- Every node can have multiple children
+- The tree is ALWAYS balanced (all leaves at same level)
+- Each node is at least HALF full (no wasted space)
+
+A B-Tree of ORDER p means:
+- Each node can have at most p-1 keys and p children
+- Each node (except root) must have at least ceiling(p/2) children
+
+In a B-Tree, DATA POINTERS exist at EVERY level (internal + leaf).
+This means you might find your record at an internal node
+without going all the way to a leaf!
+
+
+B+-TREE (The More Popular One!):
+----------------------------------
+Almost like a B-Tree, but with one KEY difference:
+
+DATA POINTERS are ONLY at the LEAF level!
+Internal nodes only have KEY VALUES to guide the search.
+
+This means:
+- You ALWAYS go to a leaf node to find your data
+- Leaf nodes are LINKED together (like a linked list)
+  So you can easily scan records in order!
+
+Why B+-Trees are better:
+- Internal nodes are SMALLER (no data pointers)
+  --> more keys fit per node --> tree is shorter --> fewer accesses!
+- Leaf nodes linked together --> great for RANGE queries
+  "Find all employees with salary between 50K and 80K"
+
+
+B+-TREE ORDER CALCULATION:
+----------------------------
+For INTERNAL nodes, order p:
+  (p x P) + ((p-1) x V) <= B
+
+  P = pointer size, V = key field size, B = block size
+  Solve for p!
+
+For LEAF nodes, order pleaf:
+  (pleaf x (V + PR)) + P <= B
+
+  PR = record pointer, P = next-leaf pointer
+
+Example: B=512, V_SSN=9, P=6, PR=7
+
+  Internal: (p x 6) + ((p-1) x 9) <= 512
+            6p + 9p - 9 <= 512
+            15p <= 521
+            p = 34
+
+  Leaf: (pleaf x (9+7)) + 6 <= 512
+        16 x pleaf <= 506
+        pleaf = 31
+
+
+B+-TREE SIZE CALCULATION (with 69% fill):
+--------------------------------------------
+If blocks are 69% full:
+
+Average keys per leaf = 0.69 x pleaf = 0.69 x 31 = 21.39 --> round up to 22
+Average fan-out (children per internal node) = ceiling(0.69 x p) = ceiling(0.69 x 34) = 24
+
+Level 1 (leaves): b1 = ceiling(30000 / 22) = 1364 blocks
+Level 2: b2 = ceiling(1364 / 24) = 57 blocks
+Level 3: b3 = ceiling(57 / 24) = 3 blocks
+Level 4: b4 = ceiling(3 / 24) = 1 block <-- ROOT
+
+Total levels = 4
+Block accesses = 4 + 1 = 5 (4 tree levels + 1 data block)
+Total tree blocks = 1364 + 57 + 3 + 1 = 1425
+
+
+B-TREE ORDER CALCULATION:
+---------------------------
+In B-Tree, EVERY node has data pointers. So nodes are BIGGER.
+
+  (p x P) + ((p-1) x (V + PR)) <= B
+  (p x 6) + ((p-1) x (9+7)) <= 512
+  6p + 16p - 16 <= 512
+  22p <= 528
+  p = 24
+
+Notice: p=24 for B-Tree vs p=34 for B+-Tree
+B-Tree has SMALLER order because each entry is bigger!
+--> Tree is TALLER --> More block accesses
+
+
+=====================================================================
+PART 5: INDEXES ON MULTIPLE KEYS
+=====================================================================
+
+Sometimes you search by TWO fields at once:
+"Find employees in Department 4 who are Age 21"
+
+Three ways to handle this:
+
+
+1. ORDERED INDEX ON COMPOSITE KEY:
+  Combine fields: index on (Dno, Age) pairs
+  Sorted: (1,20), (1,25), (2,21), (2,30), (3,21)...
+  Good for range queries: "Find all in Dept 1-3"
+
+
+2. PARTITIONED HASHING:
+  Hash each field separately, then COMBINE the hash addresses
+
+  Example: Dno=4 hashes to 3 bits: 100
+           Age=21 hashes to 5 bits: 10101
+           Combined bucket address: 100 10101 (8 bits)
+
+  To search for JUST Age=21 (unknown Dno):
+    Try ALL Dno combinations: 000 10101, 001 10101, ..., 111 10101
+    (8 buckets to check)
+
+  Good for equality only (=), NOT for ranges (<, >)
+
+
+3. GRID FILES:
+  Make a 2D grid, one dimension per field
+  Like a spreadsheet where rows = Dno values, columns = Age values
+  Each cell points to records matching that (Dno, Age) combination
+
+
+=====================================================================
+PART 6: OTHER INDEX TYPES
+=====================================================================
+
+HASH INDEX:
+  Use a hash function on the search key
+  h(K) = some formula (like sum of digits mod 10)
+  Points directly to the block/record
+
+BITMAP INDEX:
+  Used when a column has VERY FEW distinct values
+  (like Sex: M/F, or MaritalStatus: Married/Single/Divorced)
+
+  Create a BIT ARRAY for each value. Length = number of rows.
+  1 = this row has this value, 0 = it doesn't.
+
+  Example for 8 employees, column Sex:
+    M bitmap: 1 0 1 0 0 1 1 0
+    F bitmap: 0 1 0 1 1 0 0 1
+
+  Row 0 (Ahmad): M=1, F=0 --> Male
+  Row 1 (Ayesha): M=0, F=1 --> Female
+
+  To find "Male AND Married":
+    M bitmap:       1 0 1 0 0 1 1 0
+    Married bitmap: 0 0 1 0 1 1 0 0
+    AND result:     0 0 1 0 0 1 0 0
+    --> Rows 2 and 5 match!
+
+  Super fast for combining conditions with AND, OR!
+  Very compact (just 0s and 1s)
+  But only useful when there are FEW distinct values.
+
+
+FUNCTION-BASED INDEX:
+  Index on a CALCULATED value, not just a column.
+
+  Example:
+    CREATE INDEX income_ix ON Employee(Salary + (Salary * Commission_Pct));
+
+  Now this query can use the index:
+    SELECT * FROM Employee WHERE (Salary * Commission_Pct + Salary) > 15000;
+
+
+=====================================================================
+PART 7: PHYSICAL vs LOGICAL INDEXES
+=====================================================================
+
+PHYSICAL INDEX:
+  Pointer = actual disk address of the record
+  FAST but if record moves, the pointer is WRONG!
+
+LOGICAL INDEX:
+  Pointer = the primary key value, not the address
+  When record moves, index still works (look up by key)
+  Slightly slower (extra lookup) but more flexible
+
+
+=====================================================================
+PART 8: INDEX CREATION IN SQL
+=====================================================================
+
+CREATE INDEX syntax:
+  CREATE [CLUSTERED] [UNIQUE] INDEX <name> ON <table> (<column> [ASC|DESC]);
+
+Examples:
+  -- Primary Index (unique + clustered):
+  CREATE CLUSTERED UNIQUE INDEX SsnIndex ON employee(Ssn);
+
+  -- Clustering Index (clustered, not unique):
+  CREATE CLUSTERED INDEX DnoIndex ON employee(Dno);
+
+  -- Secondary Index on unique field:
+  CREATE UNIQUE INDEX TaxnoIndex ON employee(Taxno);
+
+  -- Secondary Index on non-unique field:
+  CREATE INDEX NameIndex ON employee(Name);
+
+Remember: Only ONE clustered index per table!
+          (Because data can only be physically sorted one way)
+
+
+=====================================================================
+PART 9: TUNING AND DESIGN DECISIONS
+=====================================================================
+
+WHEN TO CREATE AN INDEX:
+  - Column is used frequently in WHERE clauses
+  - Column is a key or used in JOINs
+  - You need fast lookups
+
+WHEN NOT TO CREATE AN INDEX:
+  - Column is updated very frequently (index must update too!)
+  - Table is very small (full scan is fine)
+  - Column has very few distinct values (unless using bitmap)
+
+HASH vs TREE INDEX:
+  - Hash: Great for EQUALITY (WHERE x = 5), useless for RANGE
+  - Tree: Good for both equality AND range (WHERE x BETWEEN 1 AND 10)
+
+80-20 RULE:
+  80% of processing is done by only 20% of queries.
+  Focus your indexes on those critical queries!
+
+COLUMN-BASED STORAGE:
+  Instead of storing row by row, store column by column.
+  Great for analytics (reading one column from millions of rows).
+
+
+=====================================================================
+QUICK REFERENCE - INDEX FORMULAS
+=====================================================================
+
+Index entry size:      Ri = V + P (or V + PR for secondary)
+
+Index blocking factor: bfri = floor(B / Ri)
+
+PRIMARY INDEX:
+  Entries = b (number of data blocks)
+  Blocks = ceiling(b / bfri)
+
+SECONDARY INDEX (key):
+  Entries = r (number of records)  -- DENSE!
+  Blocks = ceiling(r / bfri)
+
+SECONDARY INDEX (non-key):
+  Entries = number of distinct values
+  Extra indirection blocks = ceiling(avg_records_per_value x PR / B)
+                             x number_of_distinct_values
+
+CLUSTERING INDEX:
+  Entries = number of distinct values
+  Blocks to retrieve all records of one value:
+    ceiling(records_per_value / bfr)
+
+B+-TREE:
+  Internal order: (p x P) + ((p-1) x V) <= B --> solve for p
+  Leaf order: (pleaf x (V + PR)) + P <= B --> solve for pleaf
+
+B-TREE:
+  Order: (p x P) + ((p-1) x (V + PR)) <= B --> solve for p
+
+MULTILEVEL:
+  Block accesses = number_of_levels + 1
+  Level i entries = blocks from level i-1
+  Stop when blocks = 1
+
+
+=====================================================================
+Good luck! The key to indexing questions:
+1. Calculate Ri and bfri FIRST
+2. Know whether it's Primary/Secondary/Clustering
+3. Count entries correctly (b vs r vs distinct values)
+4. For multilevel: keep dividing by bfri until you get 1 block
+=====================================================================

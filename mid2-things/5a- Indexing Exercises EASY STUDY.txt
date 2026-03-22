@@ -1,0 +1,428 @@
+=====================================================================
+   INDEXING STRUCTURES EXERCISES - SUPER EASY STEP-BY-STEP
+=====================================================================
+
+This is ONE big problem with parts (a) through (h).
+Each part builds a different type of index on the same file.
+I'll solve each step like you've never seen this before.
+
+
+=====================================================================
+THE SETUP (Same for ALL parts!)
+=====================================================================
+
+GIVEN:
+- Block size B = 512 bytes
+- Block pointer P = 6 bytes (pointer to a block on disk)
+- Record pointer PR = 7 bytes (pointer to a specific record)
+- r = 30,000 EMPLOYEE records (fixed length)
+- Fields: NAME(30), SSN(9), DEPTCODE(9), ADDRESS(40),
+          PHONE(9), BIRTHDATE(8), SEX(1), JOBCODE(4), SALARY(4)
+- Plus 1 byte deletion marker
+
+
+=====================================================================
+PART (a): Calculate Record Size R
+=====================================================================
+
+Just add up ALL the field sizes:
+  R = 30 + 9 + 9 + 40 + 9 + 8 + 1 + 4 + 4 + 1 (deletion marker)
+  R = 115 bytes
+
+That's it! Each employee record takes 115 bytes on disk.
+
+
+=====================================================================
+PART (b): Blocking Factor and Number of Blocks
+=====================================================================
+
+BLOCKING FACTOR (how many records fit in one block):
+  bfr = floor(B / R) = floor(512 / 115) = floor(4.45) = 4
+
+  We can fit 4 records per block.
+  (We round DOWN because you can't fit 4.45 records!)
+
+NUMBER OF BLOCKS (how many blocks for the whole file):
+  b = ceiling(r / bfr) = ceiling(30000 / 4) = 7500 blocks
+
+  We need 7500 blocks to store all 30,000 records.
+  (We round UP because even 1 extra record needs a new block!)
+
+
+=====================================================================
+PART (c): PRIMARY INDEX on SSN
+=====================================================================
+
+WHAT WE'RE DOING: File is SORTED by SSN (unique key).
+We build a primary index on SSN.
+
+Remember: Primary index = SPARSE = one entry per BLOCK
+
+
+(i) Index blocking factor (bfri):
+-----------------------------------
+Each index entry has: SSN value + block pointer
+  Index entry size Ri = V_SSN + P = 9 + 6 = 15 bytes
+
+How many index entries fit per block?
+  bfri = floor(B / Ri) = floor(512 / 15) = floor(34.13) = 34
+
+  34 index entries per block.
+
+
+(ii) First-level index entries and blocks:
+--------------------------------------------
+Primary index = one entry per DATA BLOCK
+
+  Number of entries r1 = b = 7500 (one per block!)
+  Number of index blocks b1 = ceiling(7500 / 34) = ceiling(220.6) = 221 blocks
+
+
+(iii) How many levels for multilevel index:
+---------------------------------------------
+Think of it like building a pyramid. Each level indexes the one below.
+
+  Level 1: 221 blocks (we just calculated this)
+
+  Level 2: one entry per Level 1 block
+    r2 = b1 = 221 entries
+    b2 = ceiling(221 / 34) = ceiling(6.5) = 7 blocks
+
+  Level 3: one entry per Level 2 block
+    r3 = b2 = 7 entries
+    b3 = ceiling(7 / 34) = ceiling(0.21) = 1 block
+
+  Level 3 has just 1 block = TOP of the pyramid!
+
+  Answer: 3 levels
+
+
+(iv) Total blocks for the multilevel index:
+---------------------------------------------
+  b_total = b1 + b2 + b3 = 221 + 7 + 1 = 229 blocks
+
+
+(v) Block accesses to find a record:
+--------------------------------------
+  = number of levels + 1 (for the actual data block)
+  = 3 + 1 = 4 block accesses
+
+  That means: Read level 3 block, then level 2, then level 1,
+  then the actual data block. 4 reads total!
+
+  Compare to: Linear search = 7500/2 = 3750 block accesses
+  Or binary search on file = log2(7500) = 13 block accesses
+  Index wins: only 4!
+
+
+=====================================================================
+PART (d): SECONDARY INDEX on SSN (Key Field)
+=====================================================================
+
+WHAT'S DIFFERENT: File is NOT sorted by SSN this time.
+We need a secondary index. Since SSN is a KEY (unique),
+the index must be DENSE (one entry per RECORD, not per block!).
+
+
+(i) Index blocking factor (bfri):
+  Same as before! Ri = 9 + 6 = 15 bytes
+  bfri = floor(512/15) = 34
+
+  (Same formula, same answer. The index entry size doesn't change.)
+
+
+(ii) First-level entries and blocks:
+  BIG DIFFERENCE from primary index!
+  Number of entries r1 = r = 30,000 (one per RECORD, not per block!)
+  b1 = ceiling(30000 / 34) = ceiling(882.4) = 883 blocks
+
+  Compare: Primary had 221 blocks, secondary has 883!
+  That's because secondary is DENSE.
+
+
+(iii) Number of levels:
+  Level 1: 883 blocks
+  Level 2: r2 = 883, b2 = ceiling(883/34) = 26 blocks
+  Level 3: r3 = 26, b3 = ceiling(26/34) = 1 block <-- TOP!
+
+  Answer: 3 levels (same number of levels as primary, but more blocks)
+
+
+(iv) Total index blocks:
+  883 + 26 + 1 = 910 blocks (vs 229 for primary)
+
+
+(v) Block accesses:
+  = 3 + 1 = 4 block accesses
+
+  Same number of accesses! Even though secondary index is bigger,
+  it has the same number of LEVELS, so search is equally fast.
+
+
+=====================================================================
+PART (e): SECONDARY INDEX on DEPARTMENT_CODE (Non-Key!)
+=====================================================================
+
+WHAT'S DIFFERENT: DeptCode is NOT unique. NOT the ordering field.
+1000 distinct departments. 30,000 records / 1000 depts = 30 records per dept.
+
+This uses an EXTRA LEVEL OF INDIRECTION:
+  Index --> Pointer Block --> Actual Records
+
+Why? Because each DeptCode value has 30 records scattered
+across the (unordered) file. We need pointers to ALL of them.
+
+
+(i) Index blocking factor:
+  Index entry: DeptCode value + block pointer
+  Ri = 9 + 6 = 15 bytes
+  bfri = floor(512/15) = 34
+
+
+(ii) Blocks for the indirection level:
+  For EACH department, we need pointers to all its records.
+  Each department has 30 records.
+  Each record pointer = PR = 7 bytes.
+  Space per dept = 30 x 7 = 210 bytes
+
+  Does 210 fit in one block (512 bytes)? YES!
+  So each department needs 1 block for its pointers.
+  Total indirection blocks = 1000 (one per department)
+
+
+(iii) First-level index entries and blocks:
+  r1 = 1000 (one entry per distinct DeptCode value)
+  b1 = ceiling(1000/34) = 30 blocks
+
+
+(iv) Number of levels:
+  Level 1: 30 blocks
+  Level 2: r2 = 30, b2 = ceiling(30/34) = 1 block <-- TOP!
+
+  Answer: 2 levels
+
+
+(v) Total blocks (index + indirection):
+  b_total = b1 + b2 + indirection blocks
+  = 30 + 1 + 1000 = 1031 blocks
+
+
+(vi) Block accesses to retrieve ALL records of one department:
+  = levels + 1 (indirection block) + number of data blocks with records
+  = 2 + 1 + 30 = 33 block accesses
+
+  Why 30 at the end? The 30 records of that department are scattered
+  across up to 30 different data blocks (worst case, each record
+  in a different block since file is NOT sorted by DeptCode).
+
+
+=====================================================================
+PART (f): CLUSTERING INDEX on DEPARTMENT_CODE
+=====================================================================
+
+WHAT'S DIFFERENT: Now the file IS sorted by DeptCode!
+Records with same DeptCode are CLUSTERED together.
+Uses "block anchors" = each new DeptCode starts at a new block.
+
+
+(i) Index blocking factor:
+  Ri = 9 + 6 = 15, bfri = 34 (same as always)
+
+
+(ii) First-level entries and blocks:
+  r1 = 1000 (one per distinct DeptCode)
+  b1 = ceiling(1000/34) = 30 blocks
+
+  (Same as secondary index on DeptCode! But the big difference
+  is in how many blocks we need to READ the actual records.)
+
+
+(iii) Number of levels:
+  Level 2: ceiling(30/34) = 1 block <-- TOP!
+  Answer: 2 levels
+
+
+(iv) Total index blocks:
+  30 + 1 = 31 blocks (vs 1031 for secondary! MUCH less!)
+  (No indirection level needed because records are clustered!)
+
+
+(v) Block accesses to get ALL records of one department:
+
+  First, find the right cluster:
+    = levels + 1 = 2 + 1 = 3 block accesses
+
+  But wait, we need ALL 30 records of that department.
+  How many blocks do they occupy?
+    ceiling(30 / bfr) = ceiling(30/4) = 8 blocks
+
+  Because records are CLUSTERED, these 8 blocks are
+  RIGHT NEXT TO EACH OTHER! We just read them sequentially.
+
+  Total = levels + number_of_cluster_blocks = 2 + 8 = 10 block accesses
+
+  Compare to secondary index: 33 accesses!
+  Clustering is WAY better when you need all records of one value!
+
+  WHY? Because in clustering, all Dept 5 records are TOGETHER
+  in consecutive blocks. In secondary, they're SCATTERED everywhere.
+
+
+=====================================================================
+PART (g): B+-TREE INDEX on SSN
+=====================================================================
+
+File NOT ordered by SSN. We build a B+-tree.
+
+
+(i) Calculate orders p and pleaf:
+
+  INTERNAL node order p:
+    (p x P) + ((p-1) x V_SSN) <= B
+    (p x 6) + ((p-1) x 9) <= 512
+    6p + 9p - 9 <= 512
+    15p <= 521
+    p = floor(521/15) = 34
+
+    Each internal node has up to 34 children and 33 keys.
+
+  LEAF node order pleaf:
+    (pleaf x (V_SSN + PR)) + P <= B
+    (pleaf x (9 + 7)) + 6 <= 512
+    16 x pleaf <= 506
+    pleaf = floor(506/16) = 31
+
+    Each leaf holds up to 31 key-pointer pairs.
+
+
+(ii) Leaf blocks needed (69% full):
+  Average keys per leaf = 0.69 x 31 = 21.39 --> round UP to 22
+
+  Leaf blocks b1 = ceiling(30000 / 22) = 1364 blocks
+
+
+(iii) Number of levels (69% full internal nodes):
+  Average fan-out = ceiling(0.69 x 34) = ceiling(23.46) = 24
+
+  Level 2: b2 = ceiling(1364 / 24) = 57 blocks
+  Level 3: b3 = ceiling(57 / 24) = 3 blocks
+  Level 4: b4 = ceiling(3 / 24) = 1 block <-- ROOT!
+
+  Answer: 4 levels (including leaf level)
+
+  You can also use: x = ceiling(log_fo(b1)) + 1
+    = ceiling(log_24(1364)) + 1 = ceiling(2.27) + 1 = 3 + 1 = 4
+
+
+(iv) Total B+-tree blocks:
+  1364 + 57 + 3 + 1 = 1425 blocks
+
+
+(v) Block accesses:
+  = levels + 1 = 4 + 1 = 5 block accesses
+
+  Go through 4 tree levels (root to leaf), then 1 data block read.
+
+
+=====================================================================
+PART (h): B-TREE INDEX on SSN (Compare with B+-Tree)
+=====================================================================
+
+Key difference: B-Tree has data pointers at ALL levels, not just leaves.
+This makes each node BIGGER, so fewer keys fit, so the tree is TALLER.
+
+
+(i) Calculate order p:
+  (p x P) + ((p-1) x (V_SSN + PR)) <= B
+  (p x 6) + ((p-1) x (9+7)) <= 512
+  6p + 16p - 16 <= 512
+  22p <= 528
+  p = floor(528/22) = 24
+
+  B-Tree order = 24 (vs B+-Tree order = 34)
+  SMALLER because each entry is bigger (includes PR)!
+
+
+(ii) Leaf blocks (69% full):
+  Average keys per node = 0.69 x 24 = 16.56 --> round UP to 17
+  b1 = ceiling(30000 / 17) = 1765 blocks
+
+  More leaves than B+-Tree (1765 vs 1364)!
+
+
+(iii) Number of levels:
+  Fan-out = ceiling(0.69 x 24) = ceiling(16.56) = 17
+
+  Level 2: b2 = ceiling(1765 / 17) = 104 blocks
+  Level 3: b3 = ceiling(104 / 17) = 7 blocks
+  Level 4: b4 = ceiling(7 / 17) = 1 block <-- ROOT!
+
+  Answer: 4 levels (same as B+-Tree in this case)
+
+
+(iv) Total blocks:
+  1765 + 104 + 7 + 1 = 1877 blocks (vs 1425 for B+-Tree)
+
+
+(v) Block accesses:
+  = 4 + 1 = 5 (same as B+-Tree)
+
+
+=====================================================================
+B+-TREE vs B-TREE COMPARISON:
+=====================================================================
+
+                      | B+-Tree | B-Tree
+----------------------|---------|--------
+Order (p)             | 34      | 24
+Keys per leaf         | 22      | 17
+Leaf blocks           | 1364    | 1765
+Total blocks          | 1425    | 1877
+Levels                | 4       | 4
+Block accesses        | 5       | 5
+
+B+-Tree WINS because:
+  - Smaller nodes --> higher order --> fewer blocks needed
+  - Leaf nodes linked --> easy range queries
+  - In practice, B+-Tree almost always better!
+
+B-Tree's only advantage:
+  - MIGHT find a record at internal node (don't have to go to leaf)
+  - But this is rare and usually not worth it
+
+
+=====================================================================
+SUMMARY OF ALL INDEX TYPES FOR THIS FILE:
+=====================================================================
+
+Index Type                  | Levels | Block Accesses | Total Blocks
+----------------------------|--------|---------------|-------------
+Primary (SSN, ordered)      | 3      | 4             | 229
+Secondary (SSN, key)        | 3      | 4             | 910
+Secondary (Dept, non-key)   | 2      | 33 (all recs) | 1031
+Clustering (Dept)           | 2      | 10 (all recs) | 31
+B+-Tree (SSN)               | 4      | 5             | 1425
+B-Tree (SSN)                | 4      | 5             | 1877
+No index (linear search)    | -      | 3750 (avg)    | -
+No index (binary search)    | -      | 13            | -
+
+KEY INSIGHT: Even the "worst" index (B-Tree, 5 accesses) is
+WAY better than no index (3750 accesses for linear search)!
+
+
+=====================================================================
+CHEAT SHEET - How to Solve Index Problems:
+=====================================================================
+
+STEP 1: Calculate R, bfr, b (record size, blocking factor, blocks)
+STEP 2: Calculate Ri and bfri (index entry size and index blocking factor)
+STEP 3: Count entries at Level 1:
+   - Primary: r1 = b (blocks)
+   - Secondary (key): r1 = r (records)
+   - Secondary (non-key): r1 = distinct values
+   - Clustering: r1 = distinct values
+STEP 4: Calculate blocks: b1 = ceiling(r1/bfri)
+STEP 5: For multilevel: keep dividing by bfri until you get 1 block
+STEP 6: Block accesses = levels + 1 (or + more for non-key secondary)
+STEP 7: For B+-Tree: calculate p and pleaf, use 69% fill factor
+=====================================================================

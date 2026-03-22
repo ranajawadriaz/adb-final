@@ -1,0 +1,395 @@
+=====================================================================
+   FILE STRUCTURES & HASHING - PRACTICE PROBLEMS (EASY VERSION)
+=====================================================================
+
+These are solved practice problems. I'll explain each step
+like you're seeing this for the first time.
+
+
+=====================================================================
+Q1: Ordered File - Block Fetches for Queries
+=====================================================================
+
+GIVEN:
+- Relation R(A, B, C) -- a table with 3 columns: A, B, C
+- r = 500,000 records
+- Each attribute (A, B, C) = 5 bytes each
+- Record size R = 5 + 5 + 5 = 15 bytes
+- Block size B = 2048 bytes
+- File is ORDERED on column C (sorted by C values)
+- NO index exists
+- Each A value appears 5 times (so A is almost unique)
+- Each B value appears 50 times
+- Each C value appears 50,000 times (very few distinct C values)
+
+STEP 1: Calculate basics first
+  bfr = floor(2048 / 15) = 136 records per block
+  b = ceiling(500,000 / 136) = 3677 blocks
+
+Now let's answer the queries:
+
+
+QUERY (a): SELECT B, C FROM R WHERE A = Ca
+---------------------------------------------
+"Find records where column A equals some value"
+
+- The file is ordered on C, NOT on A
+- Since we're searching on A (not the ordering field),
+  we CANNOT use binary search
+- We have to do LINEAR SEARCH (check every block!)
+- A is not unique-ish enough to stop early reliably
+
+Answer: O(b) = 3677 block fetches
+
+WHY? We can't use binary search because the file isn't sorted by A.
+We might have to scan the entire file.
+
+
+QUERY (b): SELECT B, C FROM R WHERE C = Cc
+---------------------------------------------
+"Find records where column C equals some value"
+
+- The file IS ordered on C! So we CAN use binary search
+- BUT C is NOT unique - each C value appears 50,000 times!
+- So we need:
+  1. Binary search to FIND the first matching block
+  2. Then read all the blocks that contain matching records
+
+- Binary search cost = log2(b) = log2(3677) = about 12
+
+- How many matching records? Each C value appears 50,000 times
+- How many blocks do those records occupy?
+  s/bfr = 50,000 / 136 = about 368 blocks
+
+- But the first block is already found by binary search
+  So extra blocks = 368 - 1 = 367
+
+Answer: O(12 + 368 - 1) = O(379) block fetches
+
+WHY? Binary search finds the start, then we read 368 consecutive
+blocks because 50,000 matching records span that many blocks.
+
+
+=====================================================================
+Q2: Extendible Hashing - Inserting Records
+=====================================================================
+
+GIVEN:
+- Directory with global depth 2 (so 4 entries: 00, 01, 10, 11)
+- Bucket size = 4 records max
+- Hash function: to find bucket, take last 'global depth' bits of h(r)
+- We use LEAST significant bits (rightmost bits)
+
+STARTING STATE:
+  00 --> bucket with [4*]              (local depth 2)
+  01 --> bucket with [5*, 17*, 21*, 29*] (local depth 1, FULL!)
+  10 --> bucket with [2*, 10*, 14*]    (local depth 2)
+  11 --> same as 01's bucket           (local depth 1)
+  Also: 15*, 7*, 19* somewhere
+
+Understanding least significant bits:
+  5 = binary 101, last 2 bits = 01
+  17 = 10001, last 2 bits = 01
+  4 = 100, last 2 bits = 00
+  6 = 110, last 2 bits = 10
+  9 = 1001, last 2 bits = 01
+
+
+INSERTING 6:
+  h(6): 6 in binary = 110, last 2 bits = 10
+  Goes to bucket for "10" --> bucket has [2*, 10*, 14*]
+  Room for one more! Just add it.
+  Bucket becomes [2*, 10*, 14*, 6*]
+
+  No split needed. Easy!
+
+
+INSERTING 9:
+  h(9): 9 in binary = 1001, last 2 bits = 01
+  Goes to bucket for "01" --> bucket has [5*, 17*, 21*, 29*] -- FULL!
+
+  Need to SPLIT! But local depth (1) < global depth (2)?
+  Actually local depth = 1, global depth = 2... but wait,
+  after splitting we need MORE directory entries.
+
+  Since local depth will need to increase beyond global depth,
+  we DOUBLE the directory!
+
+  New global depth = 3 (so 8 entries: 000, 001, 010, 011, 100, 101, 110, 111)
+
+  Now redistribute the old bucket [5*, 17*, 21*, 29*, 9*] using 3 bits:
+    5 = 101, last 3 bits = 101
+    17 = 10001, last 3 bits = 001
+    21 = 10101, last 3 bits = 101
+    29 = 11101, last 3 bits = 101
+    9 = 1001, last 3 bits = 001
+
+  Bucket for "001": [17*, 9*]  (local depth 3)
+  Bucket for "101": [5*, 21*, 29*] (local depth 3)
+
+  The other buckets stay the same (with their local depths unchanged).
+
+RESULT after inserting 9:
+  Directory (global depth 3):
+  000 --> [4*]
+  001 --> [17*, 9*]        (NEW - split result)
+  010 --> [2*, 10*, 14*, 6*]
+  011 --> [15*, 7*, 19*]
+  100 --> [4*]             (same as 000)
+  101 --> [5*, 21*, 29*]   (NEW - split result)
+  110 --> [2*, 10*, 14*, 6*] (same as 010)
+  111 --> [15*, 7*, 19*]   (same as 011)
+
+
+=====================================================================
+Q3: Linear Hashing - Step by Step
+=====================================================================
+
+This one is a bit tricky, but let's go SUPER slow.
+
+GIVEN:
+- Start with buckets already containing data
+- h = K mod 4 (initial hash function)
+- Bucket size = 2 records max
+- Insert: 22, 21, 12
+
+WHAT IS LINEAR HASHING?
+- Buckets split in ORDER (not where the overflow happens!)
+- Uses a SPLIT POINTER to know which bucket to split next
+- When a bucket overflows, we split the bucket at the pointer
+- hi(K) = K mod M (initial), hi+1(K) = K mod 2M (for split buckets)
+
+INSERTING 22:
+  h(22) = 22 mod 4 = 2 --> goes to bucket 2
+  If bucket 2 has space, just add it.
+  If full, put in overflow AND split bucket at split pointer.
+
+INSERTING 21:
+  h(21) = 21 mod 4 = 1 --> goes to bucket 1
+
+INSERTING 12:
+  h(12) = 12 mod 4 = 0 --> goes to bucket 0
+
+Each time: check if load factor > threshold. If yes, split!
+
+The split always happens at bucket 'n' (the split pointer),
+NOT at the bucket that overflowed!
+
+After split:
+- Records in bucket n get redistributed using the NEW hash function
+- Split pointer moves to next bucket
+- When pointer reaches M, reset to 0 and M doubles
+
+
+=====================================================================
+Q4: Extendible Hashing with h(K) = K mod 8
+=====================================================================
+
+GIVEN:
+- Values: 5, 7, 11, 17, 18, 19, 23, 27, 37, 39
+- h(K) = K mod 8
+- Bucket size = 3 records max
+- Use MOST significant bits (leftmost)
+
+First, compute hash values:
+  5 mod 8 = 5 = binary 101
+  7 mod 8 = 7 = binary 111
+  11 mod 8 = 3 = binary 011
+  17 mod 8 = 1 = binary 001
+  18 mod 8 = 2 = binary 010
+  19 mod 8 = 3 = binary 011
+  23 mod 8 = 7 = binary 111
+  27 mod 8 = 3 = binary 011
+  37 mod 8 = 5 = binary 101
+  39 mod 8 = 7 = binary 111
+
+Now insert one by one. When a bucket overflows (more than 3),
+split it and increase depth as needed.
+
+Start with global depth 1:
+  Directory: 0, 1
+  Bucket for 0: holds hash values starting with 0
+  Bucket for 1: holds hash values starting with 1
+
+Insert 5 (101): starts with 1 --> bucket 1 [5]
+Insert 7 (111): starts with 1 --> bucket 1 [5, 7]
+Insert 11 (011): starts with 0 --> bucket 0 [11]
+Insert 17 (001): starts with 0 --> bucket 0 [11, 17]
+Insert 18 (010): starts with 0 --> bucket 0 [11, 17, 18] FULL!
+Insert 19 (011): starts with 0 --> bucket 0 OVERFLOW!
+
+SPLIT! Increase global depth to 2.
+  Directory: 00, 01, 10, 11
+  Redistribute bucket 0 using 2 bits:
+    11 (011): first 2 bits = 01 --> bucket 01
+    17 (001): first 2 bits = 00 --> bucket 00
+    18 (010): first 2 bits = 01 --> bucket 01
+    19 (011): first 2 bits = 01 --> bucket 01
+
+  bucket 00: [17]
+  bucket 01: [11, 18, 19] FULL!
+  bucket 10, 11 both point to [5, 7]
+
+Continue inserting...
+  23 (111): first 2 bits = 11 --> bucket 11 --> [5, 7, 23] FULL!
+  27 (011): first 2 bits = 01 --> bucket 01 [11, 18, 19] OVERFLOW!
+  ... more splits needed
+
+The process continues with more splits and directory doublings
+as needed. Each time a bucket overflows, check if you need to
+increase global depth or just split.
+
+
+=====================================================================
+Q5: Extendible Hash Index Size Calculation
+=====================================================================
+
+GIVEN:
+- Table with 25,000 rows
+- Key = 8 bytes
+- Pointer to row = 8 bytes
+- Block size = 2048 bytes
+- All keys are distinct
+
+(a) What is the lowest possible global depth?
+
+STEP 1: How many entries fit in one bucket?
+  Each entry = key + pointer = 8 + 8 = 16 bytes
+  Entries per bucket = floor(2048 / 16) = 128
+
+STEP 2: How many buckets do we need at minimum?
+  25,000 records / 128 per bucket = 196 buckets needed (at least)
+
+STEP 3: Directory size must be a power of 2
+  2^7 = 128 (not enough, only 128 < 196)
+  2^8 = 256 (enough! 256 >= 196)
+
+Answer: Global depth = 8
+
+
+(b) Average occupancy if all local depths = global depth?
+
+If all local depths = global depth, every directory entry points
+to a UNIQUE bucket. So we have 256 buckets.
+
+Total capacity = 256 buckets x 128 entries = 32,768
+
+Occupancy = 25,000 / 32,768 = 76.3%
+
+
+=====================================================================
+Q6: Extendible, Dynamic, and Linear Hashing Comparison
+=====================================================================
+
+VALUES: 5, 7, 12, 11, 9
+h(K) values in binary:
+  5 = 0101
+  7 = 0111
+  12 = 1100
+  11 = 1011
+  9 = 1001
+
+Bucket size = 2 records max
+
+
+(a) EXTENDIBLE HASHING:
+
+Start: global depth 1, directory [0, 1]
+
+Insert 5 (0101): first bit = 0 --> bucket 0 [5]
+Insert 7 (0111): first bit = 0 --> bucket 0 [5, 7] FULL
+
+Insert 12 (1100): first bit = 1 --> bucket 1 [12] OK
+
+Insert 11 (1011): first bit = 1 --> bucket 1 [12, 11] FULL
+
+Insert 9 (1001): first bit = 1 --> bucket 1 OVERFLOW!
+  Split bucket 1! Increase global depth to 2.
+  Directory: [00, 01, 10, 11]
+
+  Redistribute bucket 1 records + new record using 2 bits:
+    12 (1100): first 2 = 11 --> bucket 11
+    11 (1011): first 2 = 10 --> bucket 10
+    9 (1001): first 2 = 10 --> bucket 10
+
+  00, 01 --> [5, 7] (local depth 1, shared)
+  10 --> [11, 9] (local depth 2)
+  11 --> [12] (local depth 2)
+
+
+(b) DYNAMIC HASHING:
+
+Same idea but directory is a BINARY TREE instead of array.
+
+Start with root node pointing to one bucket.
+As you insert and buckets overflow, the tree grows.
+
+  After all insertions:
+  Root splits into 0 and 1 branches.
+  Branch 0 --> bucket [5, 7]
+  Branch 1 splits into 10 and 11:
+    10 --> bucket [11, 9]
+    11 --> bucket [12]
+
+Same result as extendible, just different directory structure!
+
+
+(c) LINEAR HASHING:
+
+Start: M = 2 buckets, split pointer = 0, load threshold = 0.9
+Each bucket holds max 2 records.
+N = total capacity = M x 2 = 4
+
+h0 = K mod 2
+
+Insert 5: h0(5) = 1 --> bucket 1 [5]
+  Load = 1/4 = 0.25 < 0.9, OK
+
+Insert 7: h0(7) = 1 --> bucket 1 [5, 7] FULL
+  Load = 2/4 = 0.5... wait, but bucket is FULL
+  Actually load = r/N where N = buckets x capacity
+  Load = 2/4 = 0.5 < 0.9... but next insert might overflow
+
+  Actually in the solution: after inserting 7, load = 1.0 > 0.9
+  (because load = records/buckets = 2/2 = 1.0)
+  SPLIT bucket 0! Create bucket 2.
+  h1 = K mod 4 (for split buckets)
+  Nothing in bucket 0 to redistribute.
+  Split pointer moves to 1.
+  Now we have: bucket 0 [], bucket 1 [5, 7], bucket 2 []
+
+Insert 12: h0(12) = 0 --> bucket 0 [12]
+  Load > 0.9 --> SPLIT bucket 1!
+  h1 = K mod 4
+  5 mod 4 = 1 --> stays in bucket 1
+  7 mod 4 = 3 --> moves to new bucket 3!
+  Now: bucket 0 [12], bucket 1 [5], bucket 2 [], bucket 3 [7]
+  M becomes 4, split pointer resets to 0
+  h0 = K mod 4 now
+
+Insert 11: h0(11) = 3 --> bucket 3 [7, 11]
+  Load > 0.9 --> SPLIT bucket 0!
+  h1 = K mod 8
+  12 mod 8 = 4 --> moves to new bucket 4
+  Now: bucket 0 [], bucket 1 [5], bucket 2 [], bucket 3 [7,11], bucket 4 [12]
+
+Insert 9: h0(9) = 1 --> bucket 1 [5, 9]
+  Load > 0.9 --> SPLIT bucket 1!
+  h1 = K mod 8
+  5 mod 8 = 5 --> moves to new bucket 5
+  9 mod 8 = 1 --> stays in bucket 1
+  Final: bucket 0 [], bucket 1 [9], bucket 2 [], bucket 3 [7,11],
+         bucket 4 [12], bucket 5 [5]
+
+
+=====================================================================
+KEY TAKEAWAYS FOR EXAM:
+=====================================================================
+
+1. For BLOCK FETCH problems: always calculate bfr and b first
+2. Ordered file on field X: binary search on X, linear on others
+3. Extendible hashing: convert to binary, look at d bits, split when full
+4. Dynamic hashing: same as extendible but tree directory
+5. Linear hashing: split in ORDER, use load factor, no directory
+6. For bucket occupancy: total_records / total_capacity
+=====================================================================

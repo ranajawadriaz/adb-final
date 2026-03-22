@@ -1,0 +1,224 @@
+
+
+Today, I am going to teach you how to search for a book online. How to do it? Should we search for one book or more? OK, let's start. If there is no index, and you have a total of 5,000 books, and how much is the monthly fee? How much is the monthly fee? 500.
+
+So, how much is the total number of books? 500,000 books. Potentially. You have the capacity, right? In the library.
+
+You have the capacity. So, let's say, these are your books. And what is this? And what is this? In the capacity, how many books are there? If there is no index, and data is not ordered on book title, and search string on book title, and if the matching of the string is not complete, then it will be a linear search.
+
+How much is the time required? If I have 5,000, will all the books transfer to me? These are the books. If file is ordered on book title, and there is no index, then it is not time-required. Book title is there, and the order is there.
+
+How much is the time required? 50 seconds. So, 50 seconds. Is it not 250? Is it not 250? There is some confusion in this.
+
+Is it log n? Or is it a little more time? It is not 250. It is not 250. No.
+
+Search one book. One book of this title. One book of this title.
+
+If it is not ordered, then how much time is required? In worst case, you will also be calm. And if it is ordered, then how much time is required? Log of one book. Now, the book of that title is 250.
+
+If it is not ordered, then time-log will be 1. Now, if the book of your title is ordered, then how much time is required? It is not ordered. How much time is required? The book of that title is 250. How much time is required? 3 hours.
+
+3 hours. It depends. It varies.
+
+100 books will be here. 100 books will be here. And 50 books will be here.
+
+In some cases, we fit books of different titles in same block. So that capacity is not wasted. And in some cases, we do not mix separate clusters of In that case, we will place it.
+
+In that case, we will place it. In that case, how many blocks will be here? It will be 3. It will be in 3. Now, which one out of 5000, which one is of 3 blocks? So, log n will take me to this cluster. If we say log n, then the book of that title is in this block.
+
+It will give the address of this block. You do this. Then log n will give me log of 5000.
+
+What did I get from this? I got the anchor block of the book of If the book of the title is in 50 blocks, then it will be collective. I will get plus 2. It is 2. 2 will be the total number of books. 250.
+
+250. Divide by its capacity. How much will it be? 2. So, log n plus 2. This is how much I got.
+
+What is the advantage of index? Now, in the book title, we made index. File is not ordered on the title. Book title.
+
+This means the book of the title is 250. It will be on the distinct shelf. This is not a guarantee.
+
+This is not a guarantee. If I call it ordered on the title, then the book of one title will be collocated. It will be on the transactive shelf.
+
+It is not ordered. It is a non-cluster index. It is on the title.
+
+So, I got the book of T title from here. I will get the pointers. How many pointers will I get? The book of T title is on which block? So, I will get 250 list of pointers.
+
+List of pointers. How many pointers will I get? 250 pointers. So, in the worst case, I will get the book of T title on the 250 distinct shelf.
+
+So, I got the book of T title. I read the index. If I want to review, I made index on 10th block.
+
+So, log of 10 is the cost I paid in order to find the location of 250 shelf which contains T title books. So, the book of T title is 50. So, out of 5000 books, which is the 250 shelf which I read? Index told me this.
+
+And how much cost I paid? Log of 10. So, I scanned the log of 10 index. So, I got the book of T title.
+
+In fact, I got the location of You tell me, out of 5000 books, which shelf will I scan? Will I get the pointers? Out of this, how many shelves will I scan? 250. So, how much time do I have? I said, log of MI log of 10 index is the cost plus 250 which is selectivity plus 250 is the table cost. Now, there will be two costs.
+
+I scanned the index. I scanned the table. So, overall, our performance has improved.
+
+How much was it before? 5000 How much was it before? 5000 The file is not ordered. Log of 10 plus 250 Now, let's see how much I have ordered. I scanned the index.
+
+Now, the file is ordered. Now, how many blocks are there in the T title? 3 blocks. And the block location is X which is the anchor block.
+
+When I scanned the index, I got only one pointer. And which pointer did I get? The anchor block of the cluster of T book. And the cost is the same.
+
+Log of M is the cost of scanning the index. Now, how many blocks are there in the T title book? How many blocks are there in the T title book? This is the difference. Selectivity was 250 before.
+
+Now, selectivity is 4 credits. And divide by the capacity which is the blocking factor. Divide by 100.
+
+250 by 100. This is 2. Now, what is the value of this? 2 The advantage of cluster index is that the matching request is full. There is a limitation.
+
+We can order the T1 book on only one column. If you have hundreds of active groups, then we should make the cluster in index. The column with the most search patterns will be your cluster index.
+
+Still, non-cluster index is not an advantage. It is better than any assertion. In this topic, we will study whether the index path should be increased or not.
+
+Potential Candidates Potential Candidates to create index. What are the tables on which the index should be made and which should not be made at all? It is not that by making index, performance improves. If your selection is not right, then it backfires.
+
+If your cost is more than the index, then it backfires. What are the potential candidates on which the index should be made and which should not be made at all? It is a separate topic. It is a high-level topic.
+
+You have hundreds of tables. First, put it in the table. Potential Candidates to create index.
+
+This is the criteria. Next, there is a table which has many attributes. Potential Candidate Columns to create index.
+
+On which column should the index be made and on which should it not be made? This is another step. Potential Candidate Columns to create index. On which column should the index be made and on which should it not be made? What will be the type of index? Should it be a beauty index, a hash index, a bitmap dynamic, or a static bitmap, or a covered index? There are many types.
+
+One of them is a hash index. On that table, you can make only one cluster index. On which column should it be made? On the other columns.
+
+This is a learning. You will become an expert. Because you have index, path, which you have created.
+
+Your performance will be 100% guaranteed. Your performance will be dramatically improved. Because you have created three indexes, three columns, and the type of index is right selection.
+
+The index will be beneficial or not. The cost will be 100% guaranteed. You will definitely pay.
+
+You will not trade off. You will evaluate it. What will be the cost of making an index? What will be the benefit? The cost is 20%, the benefit is 80%, and the benefit is 50%.
+
+When you make an index, you will see that you have a group in which you have 12 pages. For an index, additional 10 pages are required. If you add a new record to the table, will you have to change the index? This is called maintenance cost.
+
+You have the cost of two indexes, which is maintenance. Maintenance is under estimating. What is the cheapest thing in today's time? Storage.
+
+When we were studying, our teachers used to tell us that storage is the most expensive thing. It was a matter of time. It was a matter of time.
+
+You have to compromise on time. If you add 10 pages, you will get GSP. So, you have to compromise on time.
+
+Storage. If you go to G-Center, they will give you a system. A normal person will have a laptop.
+
+What is the cost of storage? 1TB. 1TB. In general.
+
+And memory? 16GB. 16GB. When we used to go there, the memory was 200MB.
+
+200GB. 200GB. I am not saying GB.
+
+Megabyte. I am saying RAM. RAM.
+
+And luxury. They used to say, if you buy a car, there is an additional charge. Those who had a lot of money, they didn't have a budget issue.
+
+Those charges were 200 and 200. And the disk used to be hard disk. It was approximately RAM was 200MB.
+
+200MB. It was not a problem. It was not a problem.
+
+In megabyte, RAM was 2MB. 2MB. 2MB.
+
+2MB. 2MB. And wait.
+
+In that system, Windows also worked. I have a system which has Windows. Today you are talking about 10 years ago.
+
+In your time, in 2020, it will be 100 years. We are talking about 25 years. We will not believe it.
+
+It will be like this. Earlier, after 10 years, major changes were coming. Now, after every 5 years, changes are coming.
+
+Speeds have increased. And internet time. Life is simple.
+
+Time is over. Where will our time go? Our time is in our control. Social network is the area of that.
+
+If you take down the internet from life, then how much time will you have for the present? The students of FAS, they used to do only three things. When they used to come to the university, they had no chance to study at home. And sometimes they used to sleep here in the lab.
+
+Where is the work? Here. Some of them even made beds. For example, when they used to work in the project system.
+
+At that time, the project was not going on like this. The project of the course is going on. The project of the database is going on.
+
+The operating system is also going on. After the final exam is completed, the project is going on. Exam is also going on.
+
+So, day and night, they used to study in the general lab. Or sports. They used to study on the ground.
+
+Or students used to study in the library. Now, these three labs. The students have no other work.
+
+So, FAS has made the practice like this. So, the teacher is also like this. They used to study at home.
+
+Now, they have no work. So, all of them have no work. So, FAS has made a team like this.
+
+FAS has made a team of teachers, students, and administrators. They have made a team of everyone. This is the team of FAS.
+
+What was your question? How many books have you searched in FAS? When I have ordered the books, How many books will be there in one shelf? 100 books. How many books will be there in the next shelf? 230 books. And how much money will be there in the remaining shelves? 250 means how many blocks are there in one cluster? 2 blocks 3 blocks 3 blocks Basically You know how many blocks are there in one cluster? How many are there in one cluster? 1 block This is 1 block This is 100 What is selectivity? This is 6 This is 3 This is 2 This is 3 minus 1 This selectivity is minus 1 I have read this in the database.
+
+There are many such forms. After that, we have this topic. This is the story structure.
+
+There will be a lecture on it. Indexing structure. Physics database design.
+
+Many lectures and free reads. 18 and 9. Strategy for free processing and. I don't have a cell phone number.
+
+You don't have a cell phone number? Where is your old number? With my younger sister. Whatsapp is also your new number. I don't have a whatsapp number.
+
+I have one. This is from India. I am using it now.
+
+I will tell you later. I only need students from Lahore. So, unnecessary data access is not possible.
+
+I already know that there are students from Lahore on this note. I will keep reading only that. So, let me go to filter and select and remove all students from my list.
+
+Take it from here. We will make different segments. We will create a section.
+
+You have to check that you are not selecting a column where data distribution is not equal. Because the result of the query will come only when the more data of the node does not come from there. Every node is giving the result in one second and every node is taking the result in 5 seconds.
+
+So the response time of your query is 5 seconds. So how to distribute the data equally?
+
+Enhanced: Lecturer: Yes, when will it happen? When I get a linear search. How much is it? Should we search for one book or all? Case select star... if there is no index... And you have 500,000 total books. And what is the capacity of one shelf? 100 books. So... so how many total books? There are 500,000 books. That’s the potential capacity of your library. So, let's say... these are your books and these are the shelves. And this is the capacity per shelf. Storing this many books. This is the scenario. Now look at this carefully. If there is no index. And data is not ordered on book title. Search string on book title. And the matching for that title is 250. So a linear search will apply. What will be the exact time? Meaning transfer all 5000 blocks to me... then those books will be found.
+
+Lecturer: If the file is ordered on book title... and there is no index. So then how much time will it take? We ordered it by book title. How much time will it take? There are 250 books. Log of 5000. Log... (student mumbles). It won't be 250, will it?
+
+Student: (Inaudible question)
+
+Lecturer: Okay, there is a little confusion here. Will it be Log N? Or a little more time than that? It won't be 250. It won't be 250. I have to search for one book. There is only one book with this title. There is only one book with title 'T'. If it is not ordered, then how much time will it take? It will take N, right? In the worst case, it will be on the last shelf. And if it is ordered, how much time did it take? Log of... I have to search for one book. Now there are 250 books with that title. If it is not ordered, then the time... it will take N. In the worst case, it will be on the last shelf. And if the data is ordered? In how many shelves will the books with title 'T' be lying? There are 250... how many shelves will they be in? Three (3). Three shelves. It depends, your storing option varies... these 100 books will be here, 100 books will be here, and 50 will be here. So in some cases, we fit books of different titles in the same block so that capacity is not wasted. And in some cases, every distinct title will have a separate cluster, we won't mix it. In that case, we will waste that storage space. In any case, on how many blocks will they be lying? They will be in three.
+
+Lecturer: Now which three blocks out of the 5000, that is not known. So Log N got me to this cluster here. If we do Log N, then the block where the book with title 'T' is lying, it gave the address of that block. This Log N of yours... the Log of 5000... what did I get from this? I got the anchor block of the cluster for the book with title 'T'. When we reached here... now even if the books with title 'T' were in 50 blocks, the blocks would be consecutive, right? Now there was no need to search. So I will say Plus... 2. Two means this will be its method, right, how many total books? 250. Divide by its capacity. What will come? 2.something... 2.5. So Log N + 2. This is how much time it took me. So this means there was an advantage to ordering, right?
+
+Lecturer: Now let's see what the Index has done? Now we created an Index on the book title on top of this. And the file is not ordered on the title (Book title). This means the 250 books with title 'T', in the worst case, will be lying in 250 distinct shelves. There is no guarantee for this, right... Yes, if I order it on the title, then all... books of one title will be co-located. They will be lying on consecutive shelves. So if it is not ordered... meaning it is a Non-cluster Index... not ordered on title. So I will get those pointers for the book with title 'T' from here... how many pointers will I get? On which blocks the book with title 'T' is lying. So I will get a list of 250 pointers here. So in the worst case, these books with title 'T' will be lying in 250 distinct shelves. So the Index told me this... Read the Index, which we are assuming is created in 10 blocks. So Log of 10. This is the cost I paid in order to find the location of 250 shelves. Which contain 'T' title books. So the books with title 'T', out of your 5000 blocks or shelves... which 250 shelves are they lying in? The Index told me this. And how much cost did I pay for this? Log of 10. So Log of 10, meaning I scanned the Index, I didn't get the books with title 'T'... rather I got the location of those books. Now tell me, out of these 5000 blocks/shelves you have, which shelves will I scan? The ones for which I got pointers from the Index. So how many shelves out of these will be scanned? It will be 250. So how much total time did it take me? We write Log of Ni (meaning Log of 10)... this is Index access cost... and plus 250 which is our selectivity. Plus 250. This is your base table access cost. So now... there are two costs. One for the Table... I scanned the Index, there will be a cost for that too. Scanned the Table, there will be a cost for that too. So overall we saw that performance has improved compared to before. How much was coming before? Had to read 5000 shelves. Now how many? In the case where the file is not ordered... Log of 10 + 250.
+
+Lecturer: Now let's see if I order this (meaning create a cluster index), then what will be the impact? If the file is ordered. Now in how many blocks will the 250 books with title 'T' be lying? In 3 blocks. And gave this block's location 'X'. Its anchor block's address. When I scanned the Index... I got only one pointer. And which pointer did I get? The one for the anchor block of the cluster of 'T' books. And the cost will remain the same. Log of Ni. This is the cost to scan the Index. Now tell me, in how many blocks will the books with title 'T' be lying? In 3 blocks. Now selectivity was 250 before. Now we take selectivity (because it is co-located) and divide by its capacity. Which we call Blocking Factor. Divided by 100. Meaning 250/100. This came out to 2. So here instead of this, what did it become? 2. So we got the advantage of Cluster Index. Our matching records are co-located. So there is a limitation to this, right? We can order the books/table on only one column, not more than one. If you have hundreds of attributes in a table... then on which should the cluster index be created? We look at patterns... the column with the most search patterns will be your potential candidate to create a cluster index. But still, we also had an advantage with the non-cluster index, it became better than Linear Search.
+
+Lecturer: This was an example for you... the access path you created... now in this topic we will study whether an Index path should be created or not... should it be or not? Potential candidate to create index... Which are those tables on which an index should be made and which are those on which it should absolutely not be made? It's not that performance improves just by creating an index. If your selection is not right then it backfires. Turns out your cost is coming out to be even more than Linear Search. It backfired. So first separate the potential candidate tables for your Index, which ones it should be made on and which ones it shouldn't. This will be at a high level. You have hundreds of tables, first you extracted those tables which are potential candidates to create indexes. We will discuss this criteria. Then next... we will take a table, it has Many attributes. So potential candidate columns to create index. So on which columns should an index be made and on which should it not be made. So then you will move one step further. When this understanding developed... then the index that will be made on that column, what will be the type of that index? Should we make a B-Tree index on that column? Make a Hash index? Make a Bitmap dynamic or static bitmap? Make a Covered index? So there are many many types. Maybe one of them will be the best. Then there is that only one Cluster Index can be made on that table. So on which column should the cluster be made, the rest will all be non-cluster. With this, a learning will develop for you. You will become an expert in this, that the index path you create will have a 100% guarantee that your performance will improve dramatically from before. Because you made the index on the right table. Made it on the right column. And the index type was also the right selection. And this thing means that the index... whether there is a benefit or not. The cost is 100% guaranteed that you will definitely pay. So we will do a trade-off too. We will evaluate what the cost of creating the index will be, and how much the benefit will be. If its cost is 20% and benefit is 80%, then the trade-off is fine. When you create an index, like you saw you have a book which has 12... multiple pages. So additional 10 pages were used for the index, right? If you add a new record to the table... will you have to make changes in the index or not? This is called Maintenance Cost. So you have two types of costs for the index: Storage and Maintenance. And maintenance is more problematic. Do not underestimate this. Because what is the cheapest thing in today's time? Storage. The issue was with Time. Compromise on Time... storage... right now if you go recently to buy a System... a normal person... take a laptop. So what storage capacity do you get?
+
+Student: 1 Terabyte.
+
+Lecturer: 1 Terabyte is general, right. And memory?
+
+Student: 16 GB.
+
+Lecturer: 16 GB?
+
+Student: 8 to 16.
+
+Lecturer: At that time when we used to go, the memory was 200 MB... there were 2 chips... I'm not saying 200 GB... Mega Byte. What we call RAM. RAM. And the luxury... like they say getting a car in condition, so additional... so the students who had more money... who didn't have a budget issue... they had two slots of 200 and 200. And the disk, the Hard disk... that was approximately... 20 MB... storage. The term GB wasn't even used. The Hard disk was in Mega Bytes. So RAM was 2 Mega Bytes... 2 MB... 4 MB. And believe me, Windows also used to run on that system. The system I had, Windows ran on it too... Unix too... there were two operating systems. And there were compilers in it too, Pascal was there, or C++ was there. And FoxPro etc. Access etc. were not there at that time. Meaning for a master program, whatever tools and technologies... languages etc... everything was installed in it. And the system used to run. If you talk today, after 10 years you will say the same thing. In your time when it was 2026, it was like this. So in '35 you will talk, at that time you won't brief that this could happen. So earlier major change was coming after 10 years... after 15 years. Now it is coming every 5 years. So the speed has become fast. And there was no internet. Life was simple, right. Time was not an issue. Where is our time being spent? Our time that is not in our control is in Social networks, isn't that so? If you take the internet out of life... then imagine how much time you will have? Students of the past used to do only three things when they came to university. They had no work to do at home. They used to come in the morning... and sometimes slept here in the Labs. Working right here. They had even made bedrolls to reach/stay. Like the Tableeghi Jamaat people have when they worked on projects. At that time projects didn't run like this. There is a course project, Database project is running... Operating System's is running... So now final exams were completed, after that work on the project... after Exams. So day and night these general Labs used to be full... Labs... or Sports grounds used to be full... or students were in the library. These were the three places. The student had no other work. So FAST didn't become a brand just like that. So the teachers were also like this... as if they were kicked out of the house... (laughter). The Administration people... were like this too. So FAST got such a team in the start in which teachers, students and administration team... everyone has a contribution. Okay then... (asking student) Have you studied from FAST?
+
+Student: No, I am saying outside the University.
+
+Lecturer: No, I joined FAST in '99.
+
+Lecturer: (Answering student question about cost calculation basis) The division of 250 by 200 that we did, on what basis did we divide? 250... (explaining the formula again on the board). How many books do I have to search? 250. When I said I have kept them ordered. How many will be lying in one shelf? 100 books. How many will be in the second? Next 100 came here. And how many were left? 50? So this means for this 250, how many blocks are in the cluster? 3 blocks in total. This plus 2 also came, right? We found the first one, that's why we are doing plus 2. -1... 3-1 this one. How many clusters? 3. So we will do -1 because this first block told us it is lying here. Basically, we did this: how many matching books were there? This many. What is the capacity? 100 are stored in one block which we call Blocking Factor. This 100. What is the selectivity? Divided this... what did it come to? 3. That's why 3 ratio... this 3. So here in its place what did it become? 3. (Summary) So we got the advantage of Cluster Index. Our matching records are co-located.
+
+Lecturer: Our introduction is done. Now we move on... let me share the course outline with you. What will we study in this course? Course Outline. You have studied the Database Systems course. So in the Database Systems course, we covered Relational Model, ERD, Normalization and SQL. This was its major part. Now what will we study in this course? We will start with Transaction Processing. Transaction Processing Concept. This will be our first module. Transaction Processing Concepts. The second module will be Concurrency Control Techniques. Concurrency Control Techniques. The third module will be Database Recovery Techniques. The fourth module will be Storage Structures and Indexing. Which we were just discussing. Storage structures and Indexing. The fifth module will be Query Processing and Query Optimization. And the sixth module will be... NoSQL Databases. NoSQL Databases. The seventh module will be Distributed Databases. Distributed Database Systems. This is our course outline. By mid-term we will try to cover these first three modules. Transaction processing, Concurrency control and Database recovery. And in the final term, these Storage structures, Indexing, Query Processing, NoSQL and Distributed Database Systems. Books. Actually, I will share the slides. Reference books actually... 'Fundamentals of Database Systems' by Navathe. Ramez Elmasri and Navathe. This is a good book. Apart from this 'Database System Concepts' by Korth. This is also a good book. Both are good books. They are standard books. I will share the slides of the lectures that will take place.
+
+Lecturer: Do you have the list of Electives?
+
+Student: (Inaudible)
+
+Lecturer: Data Science. Software Engineering.
+
+Student: (Discussion about specialization tracks)
+
+Lecturer: This is a specialization. It will not be mentioned on the Degree. Your Degree will be of Computer Science only. Courses will be mentioned on the Transcript. The degree will be of Computer Science only. Specialization is not mentioned on the Degree. It is HEC's policy. Cannot change the Degree title. It will appear on the Transcript. Is specialization written on the Transcript?
+
+Student: (Discussion about transcript details)
+
+Lecturer: Majors are written. Actually HEC allows that you can write the specialization in brackets. But the degree title will remain Computer Science. (General chatter about other campuses and degree titles).
+
+Lecturer: Okay, you confirm this. Actually the degree is of CS only. Specialization is shown from your transcript, regarding which electives you have studied. Ok then. Thank you.
+
+Students: Thank you sir.
+

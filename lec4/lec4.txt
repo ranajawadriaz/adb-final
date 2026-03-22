@@ -1,0 +1,1096 @@
+If conflict operations are present in the right order, allow them. This is what needs to be checked: if you have conflict operations between two transactions, are they in the wrong order or the right order? If right, allow it; if wrong, either abort T1 or T2, or put it in a waiting queue. However, the wrong order is 100% guaranteed not to be allowed. This is to preserve data consistency. This means every conflict operation will be serialized in such a way that it does not interfere with the schedule’s order.
+
+The right order is the one that makes your non-serial schedule serializable. It runs in a series. That is the right order. We have seen through the graph that as long as I waits for J, and J waits for K, there is no issue. But if K waits for I, then there is a problem. A deadlock occurs. Both are waiting for each other. In that case, deadlock detection will happen, or you can perform deadlock avoidance if you predict beforehand that this is more likely to create a deadlock; then avoid the deadlock. One case is that we predict the deadlock beforehand and simply do not grant permission. And the third algorithm is called Deadlock Prevention. So, we can prevent deadlock, avoid deadlock, or detect deadlock.
+
+Concurrency control protocols—the most popular ones used—are locking protocols. If there is a need to read or write any data item, you have to acquire a lock first. Then you can read or write. This is a simple SOP (Standard Operating Procedure). If you want to read or write any item, what must you do first? You need permission. You need approval. You take it like this. Do you want to read or write? You need approval. If approval is granted, then reading happens or writing happens. The program giving the approval will check: if I give approval to this, will the work proceed correctly or not? If not, approval won't be granted. Or they will say, "I need a seat in the course, add the course." You can add it in the discussion. You went to the HOD. Now he will check if giving this seat creates a problem or not. He says, "No, the seat is full." So what to do? "Let's do this, from those registered, we will out one of them and put this one in." Whose priority is high? Or, say to this one, "You wait. Maybe we will add some seats for you." If they wait, maybe someone drops. But your priority is high. As soon as someone drops, we add you; we don't add anyone else. We lock it. Then after that, a third user, a third student came; they become a waiting queue. Why was a priority queue formed? To handle this, there are three methods. The program will do exactly this: approval will be granted or not. If not granted, then there is victim selection. If granted, perhaps the one creating the problem won't get the seat; we drop them and add you. Or they go into waiting. And after some time interval, the issue might be resolved. The seat was already full; after some time, we know they have an application that this child needs to be removed from here. They requested, "My course is A, give me B instead of A." The HOD knows a request has come. And you need A. He knows if I process this, she will get it next. How will he manage the ordering? He puts the A person into B, and gives the A seat to the one requesting A. The request of both is processed. The one who said take A got A; the one who said they need B instead of A got B. So ordering happened. But it’s not like they got course C. Therefore, all operations of every transaction are executed in that order; it won't change. Switching might happen.
+
+Here, regarding switching, we saw that the one who requested A initially couldn't be added; there was no seat. First, a seat had to be created. He has the big picture, whereas students have their individual requests. He handles it, sees who has a problem and who does not. Some problems are resolved, some are not, so someone's victim selection is happening. If a course is closed, what do we do? We have to send those students somewhere. Someone got a better time, someone got a poor time. Someone shifted here and a new clash was created. Then that has to be handled again. The programs do something similar to these issues.
+
+So, Two-Phase Locking Protocol. This is the most popular concurrency control protocol, mostly DBMS uses this. It handles concurrency using locking mechanisms. A lock is a variable. When one item accesses X, consider that an entry goes into a lock table indicating that "Transaction number such-and-such has acquired a lock on X." So, in the lock table, if someone else says, "I need to acquire a lock on X," first it will look in the lock table. Has someone already acquired a lock? Through the lock table, it manages. Whenever a lock is acquired on any item, an entry is put in the lock table so we know which items in the lock table are locked and by which transaction and in which mode. Because in some cases, one locked it, and the second requested it, and they also got approval. In some cases, one locked it, and until that lock is released, no one else gets permission. This means some locks are in shared mode. Some locks apply in exclusive mode. In shared mode—meaning I locked it, you locked it, ten people locked it—everyone has permission. This normally happens when? For a Read operation. If you do a Read item, we will acquire a shared lock on it. A shared lock means many users may read the same data item simultaneously. Readers at a time can be... many. Meaning I said I want to read X, I am the first user. So first, the lock will be acquired. My transaction is T1. So an entry will go into the table: T1 applied a shared lock on X. Then a T2 transaction said I want to read X. It will immediately check the lock table. X is already locked by another transaction.
+
+Another SOP is simple: Lock doesn't apply on a lock. If an item is already unlocked, then you don't issue an unlock. If it is locked, then you unlock. If it is unlocked, you lock it. Lock doesn't apply on a lock. Unlocked doesn't happen on unlocked again. One is this. And we cannot read or write any item until we acquire a lock. This is a basic rule. Locking protocol. Now if the first user, T1, locked X in shared mode. So the read count increments by one. The count was initially zero. As T1 locked, the read count became one. This means how many readers of X are there? One. Next, T2 said read X. The data item is already locked. T2 said, "Apply shared lock on X." Lock was requested. The data item is already locked by another transaction, T1. Just increment one in count. Read count becomes two. And two gets permission to read. But who acquired the lock? One did. Lock applies again? No. When will the lock apply? If the data item is already unlocked. Then the first user will request a read shared lock, so the lock applies. And read count goes from zero to one. Followed by any transaction, whenever they request a shared lock, just the count increments and permission keeps being granted. Right now read count has become two. Then a third transaction T3 said read X. It also gets permission. And before that count increments. So read count tells us how many users are currently reading X in shared mode.
+
+If there is another transaction, it could be T4 or T1, T2, or T3—the existing ones reading—it could be them too, and it requests a Write. It says I want to write the item. For writing, we require an exclusive lock. From the meaning itself, we know that at a time there can be only one writer. Not more than one. Readers can be many. In this, there is no count cycle. Data item: either the exclusive lock will apply or it won't. By one transaction. Now we requested that we need a Write lock on X. Number one or three. Lock is acquired? And your count is currently three... reading. This is the position. Now if request T4 says, or 1, or 2, or 3, existing transactions, just transactions... any of them says it requests a Write lock, permission won't be granted. It goes into waiting. Why? Because there is already a lock. Data item is already locked. It doesn't matter which lock it is. This means an exclusive lock request will be accepted when? If data item is already unlocked. Then the request will be accepted immediately. If else... no else if... just two checks. If data item is unlocked, the exclusive lock request is accepted. Else, go to waiting. Who will it wait for? For the one who applied the lock to release it.
+
+Now, we talk about Time Stamp Ordering. This is also a protocol used in organizations. Two-Phase Locking protocol. And Time Stamp Ordering protocol. Validation-based. Optimistic concurrency control. Theoretically, it exists. But mostly locking is used.
+
+Now, consider the scenario where X is locked by T1, and there are three readers, read count is 3. There is another new request by T4. By T4 to apply a Write lock, but the data item is already locked. So this went into waiting, T4. Else part ran. From the waiting queue, when will it get a wake-up call? Wake-up call. When will it get it? If there is no lock on X. When X becomes unlocked as soon as it unlocks. So in waiting is T4. Its request gets accepted. After that, if 5 also says I want to lock... right lock... exclusive lock... that will also go into the queue. It will come below 4. Then 1 says I want to apply a lock. Right lock. Which was reading before. That will also go into the queue. It can't do it either. If there are more than one reader of a data item... none of them... no right lock... none of them can apply a right lock. If right gives permission... common sense... if permission is granted, we said this is an exclusive lock. So then two are reading and you are writing? That's not possible.
+
+If there is only one reader. That is T1. Which has a shared lock on X. There is no other reader. Or writer. Writer would be already gone. And T1 later says there is a need to apply an exclusive lock. Because it wants to write. It needs which lock? An exclusive lock is required. X already has a lock. Who applied it? T1 did. And T1 besides that... is there any other reader? So read count should be one. If there is a request by T1 and the read count is one. What does this mean? It is the only reader. So permission will be granted. But granting permission means upgrading the lock from shared lock to exclusive lock. The lock is only applied once. This is called upgrading of lock. That its shared lock is upgraded to an exclusive lock within the lock. Like you say, "Send my course add/drop form." Course A is not needed, it is registered. Register course B. But send only one request. Drop A, add B. But it is conditional. Not that A is dropped and B is not found, and A is gone too. This implies: drop A, when B is found, then A's seat is released. If B is not found, A remains. This is also somewhat the same. Maybe, here, some user was requesting... sitting in waiting... requesting a Write lock. But its priority is high. Because as soon as it releases this lock... so someone else might take it... or another reader comes. Since currently there is only one reader and it says I want to read, I have put a shared lock, it wasn't selfish. If it wanted to, it could have requested an exclusive lock first. It was doing a read. It can happen. So normally, for a good throughput, this is the case. If I want to read, I apply a shared lock. So that throughput increases, other users are also readers, so readers shouldn't wait for readers. And when I need a write, then I apply an exclusive lock. So for Write, you must have an exclusive lock. For Read, you have a shared lock or exclusive. You can read. But if you want to read and have applied an exclusive lock, it means no other user can read or write on that data item until that lock is released. Your throughput decreases. So usually DBMS gives this option... when you need a Read, apply a Shared lock. And later if needed, say I need a Write, I request, and if its lock was Shared, upgrade it to Exclusive. Provided that... provided what? That currently it is the only reader.
+
+Now the first case. If T1 said apply read lock, you applied the lock. Reader count: one. Later T1 requested: Unlock X. Unlock it. So first, when it says unlock, read count becomes minus one. Result: zero. If count equals zero, then unlock is issued. Otherwise not. Read count is two. So the item is locked. But lock is with whom? With number two. But lock is acquired by whom? By two. One said release it. Actual release didn't happen. Count became minus. Read count is zero, then unlocked happens. And 4 is waiting. Wake up. Now if later 2 requested Unlock. Read count minus one. How much remains? One. Meaning unlock operation won't run. And lock is with 2, it remains with 2. 3 said unlock. Count minus one. Remaining? One. 4 is waiting. Now if later 2 requested Unlock. Read count minus one. Remaining? Zero. If read count equals zero, data item is immediately unlocked. And waiting queue, which is 4, gets the wake-up call because there is no reader on X. The exclusive lock is accepted. If there is an exclusive lock on X by T4, then no other transaction can read or write on that. The request of anyone, shared or exclusive lock, permission won't be granted.
+
+When we make a request for Read, meaning Shared lock, or Exclusive lock. If the data item is already locked in exclusive mode, it will go into waiting. Exclusive lock means the one who applied the exclusive lock, T4, until the exclusive lock is released, no other user can read or write on that data item. Your throughput decreases. So that's why we say "Trade-off." We talk about trade-offs. I say, "This car is good." "No, that one is good." "Why?" "Its average is good." "This one is good." "Why?" "Its comfort is good." "This one is good." "Why?" "Its road grip is good." "This one is good." "Why?" "Its parts are cheap." "This one is good." "Why?" "Its resale is good." You cannot find all features in one car. If you want a cheaper car, compromise on quality. If you want a quality car, compromise on price. If you want a high-speed car, compromise on safety. If you want a safe car, compromise on speed. This is a trade-off. We compromise one thing to get another. Systems are like this too.
+
+If T2 wants to upgrade and T2 and T3 are in the shared lock, and T2 wants to upgrade the lock. Then right now count is not zero. So it will go into waiting. It will go to the next, T3. If T3 says I want to write. That will also go into waiting. This is a deadlock. T2 is waiting for T3 to release so it can upgrade. T3 is waiting for T2 to release so it can upgrade. This is a deadlock. This is also a shared lock deadlock.
+
+Downgrade of lock can also happen. If a transaction says T4, exclusive lock is with X. That means no other reader is there. Reader won't be there, right? 4 has the exclusive lock on X. So Downgrade, whatever sends the request, happens immediately. No obstruction. Because exclusive lock is with how many people? With X? Only with T4. So shared lock can be applied immediately. But practically, why do we do this? Lock is with T4. So shared lock can be applied immediately. But practically why do we do this? Lock is with T4. Why downgrade? Why apply shared lock? Why release? T4 has it. Why downgrade? Why apply shared lock? Why release? T4 has it. Why downgrade? Why apply shared lock? Why release? T4 has it.
+
+Okay, understand this. T1 aborts or T1 commits. It executes. And T2 and T3 are in the shared lock. And T2 wants to upgrade the lock. So right now the count is not zero. So it will go into waiting. It will go to T3. If T3 says I want to write. It will also go into waiting. Deadlock.
+
+If a transaction aborts or commits, all locks held by it are released. The lock manager handles this automatically.
+
+If you want to lock, what will happen? If there is no lock... see, binary locks don't work for throughput, throughput decreases. So we look at the three-mode one. What is the request coming in? Read operation. If you want to apply a read operation, the system will apply a read lock request on your behalf. You said you want to read X, so on that transaction's behalf, it will try to acquire a read lock. So what happens?
+
+If X is unlocked, immediately the read lock is applied. This is the first case, applied on unlocked. Now the read count becomes 1. Else if... there is already a read lock. Let's say T1 has already acquired a lock, does such a thing happen? So what will happen? Only the read count increments. The lock is not issued again. The lock operation doesn't run. If it is unlocked, then it gets locked. If it is already locked, only the increment happens. This means two things happen when we make a read lock request. The lock will be applied, and the count will also increment. This is the first time if one reads. If a second user makes a read request, then the lock won't be applied on the lock, actually. But for the transaction, it got the lock. Basically, the lock is with one person; two has actually added another reader. This is added.
+
+Else case... what will happen then? If neither of these two cases is true... one case is it is unlocked, so the read request is accepted. One is that a read lock is already applied, so the second one's request is also accepted, and the read count increments. In these three cases... the first case ran the 'if' condition, and in the T2 and T3 cases, the 'else if' ran. When T4 made a request... Read operation... T4 made a request. Now, let's give another scenario. Why? A transaction 5 existed, and it requested a write lock on Y, and it was unlocked, so the write lock was applied to Y. Now some other transaction, say 1, or 6, or 4, any transaction says it wants to read. Is the data item unlocked? No. Is a read lock applied on it? Else if... read lock... no. So an 'else' has come, right? In the 'else' case, it will be blocked. It will wait. Wait until when? Until it becomes unlocked. Unlock won't happen. This means whenever I make a read request, the possibilities are: the data item is already locked by another transaction with a write lock. It will be blocked, waiting. If someone else is reading... if a read lock is applied... then it won't be blocked; it will just increment. Permission will be granted. If there is no reader or writer, then the lock will also apply, and permission will be granted, and the count will increment.
+
+If there is no reader or writer, permission is granted. If there is a reader, and a second reader requests, permission is granted again. But if there is a writer beforehand... then no other user can read. It gets blocked. That is one case. Blocked. And this unlock will happen when... all readers... or its writers... until they unlock it.
+
+And the second simple operation is the write lock. If someone requests a write lock... if the data item is already unlocked, immediately the write lock is applied. If it is locked... else... simple else. There is no 'else if' here. If it is else, it will get blocked. Else when will it happen? That the data item is already locked. Whether a read lock is applied or a writer... so the write operation request should not be accepted.
+
+Can a shared lock imply a read lock on an exclusive lock? No, that is an exclusive lock. No one else can read or write on it. The meaning of exclusive is... that only he has the right. The request came for a write... it's a write lock request... but if someone has already read-locked it... then it's a lock, right? The meaning of lock is read... so waiting... request rejected. Or wait.
+
+If X is unlocked... then write lock... problem... if write lock... then the write operation runs. Else... blocked. Else when will it happen? Wait... in which mode? Wait or exclusive? If it is locked in any mode, you cannot write. This is the logic, right?
+
+Wait. So the request came... T4 requested... it wants to write on Y. So Y is already locked by 5. Will this request be accepted? No. Okay, let's say it's not like that... T6 had applied a read lock. Now T4 says, "I want to write." So it is already locked... blocked. It will be blocked. This means if it was a write lock, it is still being blocked; if it was a read lock, it is still being blocked. This will only be accepted when... unlocked. This means the write operation's 'if' and 'else' are just these two things. The request is accepted when it is unlocked. In 'else,' when will it come? If X is already locked in exclusive or shared mode... in both cases, it goes to 'else.'
+
+Okay, let's look at one of its algorithms. Down-grading, up-grading, keep that in mind. The Two-Phase Locking protocol... this guarantees... that if you follow the Two-Phase Locking protocol, your schedule will always be serializable. What is Two-Phase Locking? Every transaction must have two phases. First phase is called the Growing Phase. And the other phase is called the Shrinking Phase. And both phases are mutually exclusive. During the Growing Phase, Shrinking Phase cannot interfere. Until the Growing Phase ends, the Shrinking Phase cannot start. And once the Growing Phase ends and the Shrinking Phase starts, the Growing Phase cannot return for that transaction. This is the point. These are mutually exclusive. First, there will be a Growing Phase, and then a Shrinking Phase. First phase... completes growing... only then shrinking starts.
+
+What action can we perform in the Growing Phase? During the Growing Phase, you can acquire locks. You can acquire... but release is not allowed. That is why it is the Growing Phase. In the Shrinking Phase, you can release locks only. You cannot acquire new locks. This means if a transaction needs a lock here... and it doesn't need X's lock, doesn't need Y's... it needs Z's later on... and it needs to read Z here. So it will hold X and Y. If it released them... the first lock... the Shrinking Phase starts immediately. Then it won't get a new lock. So, possibly, a transaction needs a lock here... and it has many other locks... X's lock isn't needed, Y's isn't needed... Z's is needed later on... to read Z here. So it will hold X and Y. If it released them... the first lock... the Shrinking Phase starts immediately. Then it won't get a new lock.
+
+So, possibly, a transaction needs a lock here... and it has many other locks... X's lock isn't needed, Y's isn't needed... Z's is needed later on... to read Z here. So it will hold X and Y. If it released them... the first lock... the Shrinking Phase starts immediately. Then it won't get a new lock. So it implies that for a transaction, if it needs Z's lock... and it acquired Z's lock at this time... and it is doing the write or read later on... it's a lock, right? At such a time, you say it acquired a "too early" lock. It acquired Z's lock unnecessarily early. But it didn't hold the unnecessary lock... that provided a benefit too, right? It released it. But to release it, it needed Z... either in two cases... either it doesn't release X and Y... and acquires Z's lock at that time when needed... This is a problem. So this means... wait... un-necessary... you have held the lock... this is also not beneficial. But it had to do it. It had to do it.
+
+This means... wait... Unnecessary... you held the lock... this is also not beneficial. But it had to do it. It had to do it. This means... wait... Unnecessary... you held the lock... this is also not beneficial. But it had to do it. It had to do it. Wait... Unnecessary... you held the lock... this is also not beneficial. But it had to do it. It had to do it. Wait... Unnecessary... you held the lock... this is also not beneficial. But it had to do it. It had to do it.
+
+Is deadlock possible in Two-Phase Locking? Yes. Deadlock is possible. It can happen. For example, T1 needs X and Y. T2 also needs X and Y. T1 acquired lock on X. T2 acquired lock on Y. Now T1 says, "Give me Y." T2 says, "Give me X." Both are following the Two-Phase Locking. T1 is in the Growing Phase, asking for locks. T2 is in the Growing Phase, asking for locks. But a deadlock has occurred. T1 is waiting for T2 to release Y. T2 is waiting for T1 to release X. Neither is releasing because they are in the Growing Phase; they need more locks. So Two-Phase Locking guarantees serializability, but it does not guarantee freedom from deadlocks. Deadlocks can happen.
+
+It guarantees... if you follow the Two-Phase Locking protocol... your schedule will always be serializable. What is Two-Phase Locking? Every transaction must have two phases. First phase is called the Growing Phase. And the other phase is called the Shrinking Phase. And both phases are mutually exclusive. During the Growing Phase, Shrinking Phase cannot interfere. Until the Growing Phase ends, the Shrinking Phase cannot start. And once the Growing Phase ends and the Shrinking Phase starts, the Growing Phase cannot return for that transaction. This is the point. These are mutually exclusive. First, there will be a Growing Phase, and then a Shrinking Phase. First phase... completes growing... only then shrinking starts.
+
+
+
+(Lecture resumes briefly or concludes) In the next lecture, we will start with... read-write lock... and basic... strict... rigorous... strict Two-Phase Locking... we will see that. Conservative... strict... rigorous... these are variants of Two-Phase Locking. And we will see how to handle deadlocks. If a deadlock occurs... how to detect it... how to recover from it. That will be the next topic. Okay? That's it for today.
+
+Concurrency Control Techniques
+1
+
+Slide  2
+Introduction
+Concurrency control protocols
+Set of rules to guarantee serializability
+Two-phase locking protocols
+Lock data items to prevent concurrent access
+Timestamp
+Unique identifier for each transaction
+Multiversion currency control protocols
+Use multiple versions of a data item
+Validation or certification of a transaction
+2
+
+Slide 18- 3
+Database Concurrency Control
+1   Purpose of Concurrency Control
+To enforce Isolation (through mutual exclusion) among conflicting transactions. 
+To preserve database consistency through consistency preserving execution of transactions.
+To resolve read-write and write-write conflicts.
+
+Example: 
+In concurrent execution environment if T1 conflicts with T2 over a data item A, then the existing concurrency control decides if T1 or T2 should get the A and if the other transaction is rolled-back or waits.  
+3
+
+Slide 18- 4
+Database Concurrency Control
+Two-Phase Locking Techniques
+Locking is an operation which secures 
+(a) permission to Read
+(b) permission to Write a data item for a transaction.  
+Example: 
+Lock (X).  Data item X is locked in behalf of the requesting transaction.  
+Unlocking is an operation which removes these permissions from the data item.  
+Example:
+Unlock (X): Data item X is made available to all other transactions.
+Lock and Unlock are Atomic operations.
+4
+
+Slide 18- 5
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components 
+Two locks modes:
+(a) shared (read) 	(b) exclusive (write).
+Shared mode:  shared lock (X)
+More than one transaction can apply share lock on X for reading its value but no write lock can be applied on X by any other transaction.
+Exclusive mode: Write lock (X)
+Only one write lock on X can exist at any time and no shared lock can be applied by any other transaction on X.
+Conflict matrix
+5
+
+Slide 18- 6
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components
+Lock Manager: 
+Managing locks on data items.
+Lock table: 
+Lock manager uses it to store the identify of transaction locking a data item, the data item, lock mode and pointer to the next data item locked. One simple way to implement a lock table is through linked list.
+6
+
+Slide 18- 7
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components
+Database requires that all transactions should be well-formed.  A transaction is well-formed if:
+It must lock the data item before it reads or writes to it.
+It must not lock an already locked data items and it must not try to unlock a free data item.
+7
+
+Slide 18- 8
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components
+The following code performs the lock operation:
+
+B:	if LOCK (X) = 0 (*item is unlocked*)
+	then LOCK (X) ← 1 (*lock the item*)
+	else begin
+		wait (until lock (X) = 0) and
+		the lock manager wakes up the transaction);
+	goto B
+	end;
+8
+
+Slide 18- 9
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components
+The following code performs the unlock operation:
+
+	LOCK (X) ← 0 (*unlock the item*)
+	if any transactions are waiting then
+		wake up one of the waiting the transactions;
+9
+
+Slide 18- 10
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components
+The following code performs the read operation:
+	B: if LOCK (X) = “unlocked” then
+begin LOCK (X) ← “read-locked”;
+	no_of_reads (X) ← 1;
+end
+else if LOCK (X) ← “read-locked” then
+	      no_of_reads (X) ← no_of_reads (X) +1
+	  else begin wait (until LOCK (X) = “unlocked” and
+		   the lock manager wakes up the transaction);
+		   go to B
+		end;
+10
+
+Slide 18- 11
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components
+The following code performs the write lock operation:
+	B: if LOCK (X) = “unlocked” then
+	LOCK (X) ← “write-locked”;
+	
+	  else begin wait (until LOCK (X) = “unlocked” and
+		   the lock manager wakes up the transaction);
+		   go to B
+		end;
+11
+
+Slide 18- 12
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components
+The following code performs the unlock operation:
+	if LOCK (X) = “write-locked” then
+begin LOCK (X) ← “unlocked”;
+	 wakes up one of the transactions, if any
+end
+else if LOCK (X) ← “read-locked” then
+	begin
+	      no_of_reads (X) ← no_of_reads (X) -1
+	      if  no_of_reads (X) = 0 then 		  
+	      begin
+		 LOCK (X) = “unlocked”;
+		wake up one of the transactions, if any
+	      end
+	end;
+12
+
+Slide 18- 13
+Database Concurrency Control
+Two-Phase Locking Techniques: Essential components
+Lock conversion
+Lock upgrade: existing read lock to write lock
+		if Ti has a read-lock (X) and Tj has no read-lock (X) (i ≠ j) then
+	    convert read-lock (X) to write-lock (X)
+    		else
+	    force Ti to wait until Tj unlocks X
+
+Lock downgrade: existing write lock to read lock
+		Ti has a write-lock (X)    (*no transaction can have any lock on X*)
+		convert write-lock (X) to read-lock (X)
+    
+13
+
+Slide 18- 14
+Database Concurrency Control
+Two-Phase Locking Techniques: The algorithm
+Two Phases:
+(a) Locking (Growing)
+(b) Unlocking (Shrinking).
+Locking (Growing) Phase:
+A transaction applies locks (read or write) on desired data items one at a time.
+Unlocking (Shrinking) Phase:
+A transaction unlocks its locked data items one at a time.
+Requirement:
+For a transaction these two phases must be mutually exclusively, that is, during locking phase unlocking phase must not start and during unlocking phase locking phase must not begin.
+    
+	
+14
+
+Slide 18- 15
+Database Concurrency Control
+Two-Phase Locking Techniques: The algorithm
+	
+	T1			T2		    Result
+	read_lock (Y);		read_lock (X);	    Initial values: X=20; Y=30
+	read_item (Y);		read_item (X);	    Result of serial execution
+	unlock (Y);		unlock (X);	    T1 followed by T2 
+	write_lock (X);		Write_lock (Y);	    X=50, Y=80.
+	read_item (X);		read_item (Y);	    Result of serial execution
+	X:=X+Y;		Y:=X+Y;		    T2 followed by T1 
+	write_item (X);		write_item (Y);	    X=70, Y=50
+	unlock (X);		unlock (Y);
+
+15
+
+Slide 18- 16
+Database Concurrency Control
+Two-Phase Locking Techniques: The algorithm
+
+	T1			T2		    Result
+	read_lock (Y);				    X=50; Y=50
+	read_item (Y);				    Nonserializable because it.
+	unlock (Y);				    violated two-phase policy.
+			read_lock (X); 	
+			read_item (X);	    
+			unlock (X); 	
+			write_lock (Y);	
+			read_item (Y);
+			Y:=X+Y;
+			write_item (Y);
+			unlock (Y);
+	write_lock (X);
+	read_item (X);	
+	X:=X+Y;
+	write_item (X);
+	unlock (X);
+   
+Time
+16
+
+Slide 18- 17
+Database Concurrency Control
+Two-Phase Locking Techniques: The algorithm
+	
+	T’1			T’2		
+	read_lock (Y);		read_lock (X);	T1 and T2 follow two-phase
+	read_item (Y);		read_item (X);	policy but they are subject to
+	write_lock (X);		Write_lock (Y);	deadlock, which must be
+	unlock (Y);		unlock (X);	dealt with.
+	read_item (X);		read_item (Y);	
+	X:=X+Y;		Y:=X+Y;		    
+	write_item (X);		write_item (Y);	
+	unlock (X);		unlock (Y);
+
+17
+
+Slide 18- 18
+Database Concurrency Control
+Two-Phase Locking Techniques: The algorithm
+Two-phase policy generates two locking algorithms
+(a) Basic 
+(b) Conservative
+Conservative: 
+Prevents deadlock by locking all desired data items before transaction begins execution.
+Basic:
+Transaction locks data items incrementally.  This may cause deadlock which is dealt with.
+Strict:
+A more stricter version of Basic algorithm where unlocking (of write-lock) is performed after a transaction terminates (commits or aborts and rolled-back) but a transaction may release read-lock before before it commits or aborts. This is the most commonly used two-phase locking algorithm.
+Rigorous:
+Transaction does not release any locks until after it commits or aborts.
+18
+
+Slide 18- 19
+Database Concurrency Control
+Dealing with Deadlock and Starvation
+Deadlock
+	T’1			T’2		
+	read_lock (Y);				T1 and T2 did follow two-phase
+	read_item (Y);				policy but they are deadlock
+				read_lock (X);	
+				read_item (X);			    
+	write_lock (X);		
+	(waits for X)		write_lock (Y);
+				(waits for Y)
+		
+Deadlock (T’1 and T’2)
+19
+
+Slide 18- 20
+Database Concurrency Control
+Dealing with Deadlock and Starvation
+Deadlock prevention
+A transaction locks all data items it refers to before it begins execution.
+This way of locking prevents deadlock since a transaction never waits for a data item.
+The conservative two-phase locking uses this approach.
+20
+
+Slide 18- 21
+Database Concurrency Control
+Dealing with Deadlock and Starvation
+Deadlock detection and resolution
+In this approach, deadlocks are allowed to happen.  The scheduler maintains a wait-for-graph for detecting cycle.  If a cycle exists, then one transaction involved in the cycle is selected (victim) and rolled-back.
+A wait-for-graph is created using the lock table.  As soon as a transaction is blocked, it is added to the graph.  When a chain like: Ti waits for Tj waits for Tk waits for Ti or Tj occurs, then this creates a cycle.  One of the transaction o
+21
+
+Slide 18- 22
+Database Concurrency Control
+Dealing with Deadlock and Starvation
+Deadlock avoidance
+There are many variations of two-phase locking algorithm.
+Some avoid deadlock by not letting the cycle to complete.
+That is as soon as the algorithm discovers that blocking a transaction is likely to create a cycle, it rolls back the transaction.
+Wound-Wait and Wait-Die algorithms use timestamps to avoid deadlocks by rolling-back victim.
+22
+
+Slide 18- 23
+Database Concurrency Control
+Dealing with Deadlock and Starvation
+Starvation
+Starvation occurs when a particular transaction consistently waits or restarted and never gets a chance to proceed further. 
+In a deadlock resolution it is possible that the same transaction may consistently be selected as victim and rolled-back.
+This limitation is inherent in all priority based scheduling mechanisms.
+In Wound-Wait scheme a younger transaction may always be wounded (aborted) by a long running older transaction which may create starvation.
+23
+
+Slide 18- 24
+Database Concurrency Control
+Timestamp based concurrency control algorithm
+Timestamp
+A monotonically increasing variable (integer) indicating the age of an operation or a transaction.  A larger timestamp value indicates a more recent event or operation.
+Timestamp based algorithm uses timestamp to serialize the execution of concurrent transactions.
+24
+
+Slide 18- 25
+Database Concurrency Control
+Timestamp based concurrency control algorithm
+Basic Timestamp Ordering
+1.  Transaction T issues a write_item(X) operation:
+If read_TS(X) > TS(T) or if write_TS(X) > TS(T), then an younger transaction has already read the data item so abort and roll-back T and reject the operation.
+If the condition in part (a) does not exist, then execute write_item(X) of T and set write_TS(X) to TS(T).
+2.  Transaction T issues a read_item(X) operation:
+If write_TS(X) > TS(T), then an younger transaction has already written to the data item so abort and roll-back T and reject the operation.
+If write_TS(X) ≤ TS(T), then execute read_item(X) of T and set read_TS(X) to the larger of TS(T) and the current read_TS(X).
+25
+
+Slide 18- 26
+Database Concurrency Control
+Timestamp based concurrency control algorithm
+Strict Timestamp Ordering
+1.  Transaction T issues a read_item(X) or write_item(X) operation:
+If TS(T) > write_TS(X), then delay T until the transaction T’ that wrote X has terminated (committed or aborted).
+26
+
+Slide 18- 27
+Database Concurrency Control
+Timestamp based concurrency control algorithm
+Thomas’s Write Rule
+If read_TS(X) > TS(T) then abort and roll-back T and reject the operation.
+If write_TS(X) > TS(T), then just ignore the write operation and continue execution.  This is because the most recent writes counts in case of two consecutive writes.
+If the conditions given in 1 and 2 above do not occur, then execute write_item(X) of T and set write_TS(X) to TS(T).
+27
+
+Slide 18- 28
+Database Concurrency Control
+Multiversion concurrency control techniques
+This approach maintains a number of versions of a data item and allocates the right version to a read operation of a transaction.  Thus unlike other mechanisms a read operation in this mechanism is never rejected.
+Side effect:
+Significantly more storage (RAM and disk) is required to maintain multiple versions.  To check unlimited growth of versions, a garbage collection is run when some criteria is satisfied.
+	
+
+	
+28
+
+Slide 18- 29
+Database Concurrency Control
+Multiversion technique based on timestamp ordering
+This approach maintains a number of versions of a data item and allocates the right version to a read operation of a transaction.
+Thus unlike other mechanisms a read operation in this mechanism is never rejected.
+Side effects:  Significantly more storage (RAM and disk) is required to maintain multiple versions.  To check unlimited growth of versions, a garbage collection is run when some criteria is satisfied.
+29
+
+Slide 18- 30
+Database Concurrency Control
+Multiversion technique based on timestamp ordering
+Assume X1, X2, …, Xn are the version of a data item X created by a write operation of transactions.  With each Xi a read_TS (read timestamp) and a write_TS (write timestamp) are associated.
+read_TS(Xi):  The read timestamp of Xi is the largest of all the timestamps of transactions that have successfully read version Xi.
+write_TS(Xi):  The write timestamp of Xi that wrote the value of version Xi.
+A new version of Xi is created only by a write operation.
+30
+
+Slide 18- 31
+Database Concurrency Control
+Multiversion technique based on timestamp ordering
+To ensure serializability, the following two rules are used.
+If transaction T issues write_item (X) and version i of X has the highest write_TS(Xi) of all versions of X that is also less than or equal to TS(T), and read _TS(Xi) > TS(T), then abort and roll-back T; otherwise create a new version Xi and read_TS(X) = write_TS(Xj) = TS(T).
+If transaction T issues read_item (X), find the version i of X that has the highest write_TS(Xi) of all versions of X that is also less than or equal to TS(T), then return the value of Xi to T, and set the value of read _TS(Xi) to the largest of TS(T) and the current read_TS(Xi).
+
+	
+
+	
+31
+
+Slide 18- 32
+Database Concurrency Control
+Multiversion technique based on timestamp ordering
+To ensure serializability, the following two rules are used.
+If transaction T issues write_item (X) and version i of X has the highest write_TS(Xi) of all versions of X that is also less than or equal to TS(T), and read _TS(Xi) > TS(T), then abort and roll-back T; otherwise create a new version Xi and read_TS(X) = write_TS(Xj) = TS(T).
+
+If transaction T issues read_item (X), find the version i of X that has the highest write_TS(Xi) of all versions of X that is also less than or equal to TS(T), then return the value of Xi to T, and set the value of read _TS(Xi) to the largest of TS(T) and the current read_TS(Xi).
+Rule 2 guarantees that a read will never be rejected.
+	
+
+	
+32
+
+Slide 18- 33
+Database Concurrency Control
+Multiversion Two-Phase Locking Using Certify Locks
+Concept
+Allow a transaction T’ to read a data item X while it is write locked by a conflicting transaction T.
+This is accomplished by maintaining two versions of each data item X where one version must always have been written by some committed transaction.  This means a write operation always creates a new version of X.
+	
+
+	
+33
+
+Slide 18- 34
+Database Concurrency Control
+Multiversion Two-Phase Locking Using Certify Locks
+Steps
+X is the committed version of a data item.
+T creates a second version X’ after obtaining a write lock on X.
+Other transactions continue to read X.
+T is ready to commit so it obtains a certify lock on X’.
+The committed version X becomes X’.
+T releases its certify lock on X’, which is X now.
+	
+
+	
+read/write locking scheme          read/write/certify locking scheme
+Compatibility tables for
+Yes
+Yes
+34
+
+Slide 18- 35
+Database Concurrency Control
+Multiversion Two-Phase Locking Using Certify Locks
+Note:
+In multiversion 2PL read and write operations from conflicting transactions can be processed concurrently.  
+This improves concurrency but it may delay transaction commit because of obtaining certify locks on all its writes.  It avoids cascading abort but like strict two phase locking scheme conflicting transactions may get deadlocked.
+	
+
+	
+35
+
+Slide 18- 36
+Database Concurrency Control
+Validation (Optimistic) Concurrency Control Schemes
+Optimistic concurrency control allows transactions to proceed until they are ready to commit, whereupon a check is made to see whether they have performed conflicting operations on data items.
+The idea behind this technique is surprisingly simple…
+	Just go ahead and do whatever you want to, without paying attention to what anybody else is doing.
+If there is a conflict worry about it later.
+In practice, conflicts are relatively rare, so most of the time it works right
+	
+
+	
+36
+
+Slide 18- 37
+Database Concurrency Control
+Disadvantages of Locking (Proposal of Optimistic Approach)
+Kung and Robinson identified a number of inherited disadvantages of locking and proposed an alternative OPTIMISTIC APPROACH.
+We can summarize the drawbacks of locking:
+Lock maintenance represents an overhead that is not present in systems that do not support concurrent access to shared data.
+The use of locks can result in DEADLOCK.
+To avoid cascading aborts, locks cannot be released until the end of the transaction.
+	
+
+	
+37
+
+Slide 18- 38
+Database Concurrency Control
+Phases of Transactions
+Read Phase (Working Phase)
+Validation Phase
+Write Phase  (Update Phase )
+READ PHASE
+During the read phase, each transaction has a tentative version of the data items that it updates.
+Read operations are performed immediately- if a tentative version already exist, a Read operation accesses it, otherwise it accesses the most recently committed value of the data item.
+Two records are kept of the data items accessed within a transaction:
+READ SET
+WRITE SET
+	
+
+	
+38
+
+Slide 18- 39
+Database Concurrency Control
+VALIDATION PHASE
+When the Close Transaction request is received, the transaction is validated to establish whether or not its operations on data items conflict with the operations of the other transactions on the same data items.
+If the validation is successful then the transaction can commit
+If the validation fails then some form of conflict resolution must be used.
+
+WRITE PHASE
+If a transaction is validated, all of the changes recorded in its tentative versions are made permanent.
+Write transactions are ready to commit once the tentative versions of the data items have been recorded in permanent storage.
+
+	
+
+	
+39
+
+Slide 18- 40
+Database Concurrency Control
+Validation of Transactions
+Validation uses the Read/Write conflict rules to ensure that the scheduling of a particular transaction is serially equivalent.
+To assist in performing validation, each transaction is assigned a transaction number when it enters the validation phase.
+If the transaction is validated and completes successfully, it retains the transaction number else it is aborted.
+Transaction numbers are integers assigned in ascending sequence.
+Transaction with the number Ti always precedes a transaction with the number Tj if   i<j.
+The Validation test is based on conflicts between operations in pairs of transaction Ti and Tj.
+	
+
+	
+40
+
+ Serializability of transaction Tv with respect to transaction Ti
+Tv
+Ti
+Rule
+write
+read
+1.
+Ti
+ must not read objects written by 
+Tv
+read
+write
+2.
+Tv
+ must not read objects written by 
+Ti
+write
+write
+3.
+Ti
+ must not write objects written by 
+ Tv 
+and 
+Tv
+ must
+not write objects written by 
+Ti
+- Make the rule that only one transaction may be in the Validation and  Write phase at one time. When no two transactions may overlap in the Write phase, Rule 3 is satisfied.
+- The Validation of a transaction must ensure that the Rules 1 and 2 are also obeyed by testing for overlaps between the data items of Ti and Tj.
+Database Concurrency Control
+
+Slide 18- 42
+Database Concurrency Control
+Forms of Validation
+Backward Validation
+Forward Validation
+	
+
+	
+	
+42
+
+Slide 18- 43
+Database Concurrency Control
+Backward Validation
+Here the transaction undergoing validation is checked with the preceding overlapping transactions.
+Rule 1 is satisfied here
+Rule 2 is satisfied here
+If there is any overlap, the validation fails.
+Let startTn be the biggest transaction number assigned at the time when transaction Tj started its read phase and finishTn be the biggest transaction number assigned at the time when Tj entered the validation phase.
+The following program describes the algorithm for the validation of Tj:
+Valid: = TRUE;
+FOR   Ti  : =   startTn + 1 TO finishTn   DO
+          IF   read set of Tj intersects write set of Ti   THEN
+                   Valid: = FALSE
+          END
+ END 
+	
+
+	
+	
+43
+
+Slide 18- 44
+Database Concurrency Control
+Backward Validation (cont)
+startTn+1 = T2 and finishTn= T3.
+
+In Backward Validation, the read set of Tj must be compared with the write sets of T2 and T3.
+
+If there is a conflict the only way to resolve is to abort the transaction that is undergoing validation.
+
+In Backward Validation, the write sets of old committed versions of data items are retained until there are no unvalidated overlapping transactions.
+For example the write sets of T1,T2,T3 and Tj must be maintained until the active transaction active 1 completes.
+	
+
+	
+	
+44
+
+Slide 18- 45
+Database Concurrency Control
+Validation of Transactions
+	
+
+	
+	
+Earlier committed
+transactions
+Working
+Validation
+Update
+T
+1
+Tj
+Transaction
+being validated
+T
+2
+T
+3
+Later active
+transactions
+active
+1
+active
+2
+45
+
+Slide 18- 46
+Database Concurrency Control
+Forward Validation
+Forward Validation checks the transaction undergoing validation with other later transactions, which are still active.
+For e.g In validation of transaction Tj, Write set of Tj is compared with the Read sets of all overlapping active transactions - those that are still in their read phase (Rule 1).
+Rule 2 is automatically fulfilled because the active transactions do not write until Tj has completed.
+Let the Active transactions have transaction identifiers active1 to activeN, then the following program describes the algorithm for the Forward validation of Tj:
+Valid: = TRUE;
+FOR   Tid: = active1 TO activeN   DO
+          IF   write set of Tj intersects read set of Tid   THEN
+                   Valid: = FALSE
+          END
+ END
+	
+
+	
+	
+46
+
+Slide 18- 47
+Database Concurrency Control
+Forward Validation (cont)
+In Fig (validation of transactions) the write set of transaction Tj must be compared with the read sets of the transactions with identifiers active1 and active2.
+As the transactions being compared with the validating transaction are still active, we have a choice of whether to abort the validating transaction or to take some alternative way of resolving conflict.
+
+Harder suggests several alternative strategies ...
+Defer the validation until a later time when the conflicting transactions have finished.
+Abort all the conflicting active transactions and commit the transaction being validated.
+Abort the transaction being validated.
+
+	
+
+	
+	
+47
+
+Slide 18- 48
+Database Concurrency Control
+Validation of Transactions
+
+Backward validation of transaction Tv
+	boolean valid = true;
+	for (int Ti  = startTn+1; Ti <= finishTn; Ti++){
+		if (read set of Tv intersects write set of Ti) 
+			valid = false;
+	}
+
+Forward validation of transaction Tv
+	boolean valid = true;
+	for (int Tid = active1; Tid <= activeN; Tid++){
+		if (write set of Tv intersects read set of Tid) 
+			valid = false;
+	}
+	
+
+	
+	
+48
+
+
+
+
+
+Comparison of Forward and Backward Validation
+
+    Backward Validation	  	  Forward Validation	
+
+
+
+
+
+
+-Backward Validation allows only one option- to abort the transaction being validated 
+-Backward Validation compares a possibly large read set with the old write set.
+
+-Forward Validation allows flexibility in the resolution of conflicts.
+-Forward Validation checks a small write set against the read sets of the active transactions
+
+Database Concurrency Control
+
+Slide 18- 50
+Database Concurrency Control
+Starvation
+In schemes that rely on aborting and restarting transactions, there is no guarantee that a particular transaction will ever pass the Validation checks.
+
+The deprivation of a transaction from ever being able to commit is called Starvation
+
+Remedy for Starvation
+Kung and Robinson suggest that Starvation can be avoided if the server detects a transaction that has been aborted several times and gives it an exclusive access by the use of critical section protected by a semaphore..
+	
+
+	
+	
+50
+
+Slide 18- 51
+Database Concurrency Control
+Granularity of data items and Multiple Granularity Locking
+A lockable unit of data defines its granularity. Granularity can be coarse (entire database) or it can be fine (a tuple or an attribute of a relation).  
+Data item granularity significantly affects concurrency control performance. Thus, the degree of concurrency is low for coarse granularity and high for fine granularity.  
+Example of data item granularity:
+A field of a database record (an attribute of a tuple)
+A database record (a tuple or a relation)
+A disk block
+An entire file
+The entire database
+51
+
+Slide 18- 52
+Database Concurrency Control
+Granularity of data items and Multiple Granularity Locking
+The following diagram illustrates a hierarchy of granularity from coarse (database) to fine (record).
+
+
+
+52
+
+Slide 18- 53
+Database Concurrency Control
+Granularity of data items and Multiple Granularity Locking
+To manage such hierarchy, in addition to read and write, three additional locking modes, called intention lock modes are defined:
+Intention-shared (IS): indicates that a shared lock(s) will be requested on some descendent nodes(s).
+Intention-exclusive (IX): indicates that an exclusive lock(s) will be requested on some descendent node(s).
+Shared-intention-exclusive (SIX): indicates that the current node is locked in shared mode but an exclusive lock(s) will be requested on some descendent nodes(s).
+53
+
+Slide 18- 54
+Database Concurrency Control
+Granularity of data items and Multiple Granularity Locking
+These locks are applied using the following compatibility matrix:
+
+	
+
+	
+Intention-shared (IS
+Intention-exclusive (IX)
+Shared-intention-exclusive (SIX)
+54
+
+Slide 18- 55
+Database Concurrency Control
+Granularity of data items and Multiple Granularity Locking
+The set of rules which must be followed for producing serializable schedule are
+The lock compatibility must adhered to.
+The root of the tree must be locked first, in any mode..
+A node N can be locked by a transaction T in S or IX mode only if the parent node is already locked by T in either IS or IX mode.
+A node N can be locked by T in X, IX, or SIX mode only if the parent of N is already locked by T in either IX or SIX mode.
+T can lock a node only if it has not unlocked any node (to enforce 2PL policy).
+T can unlock a node, N, only if none of the children of N are currently locked by T.
+
+55
+
+Slide 18- 56
+Database Concurrency Control
+Granularity of data items and Multiple Granularity Locking: An example of a serializable execution:
+T1                          T2                                   T3
+IX(db)
+IX(f1)
+                             IX(db)
+                                                                     IS(db)
+                                                                     IS(f1)
+                                                                     IS(p11)
+IX(p11)
+X(r111)
+                            IX(f1)
+                            X(p12)
+                                                                    S(r11j)
+IX(f2)
+IX(p21)
+IX(r211)
+Unlock (r211)
+Unlock (p21)
+Unlock (f2)
+                                                                   S(f2)
+
+	
+
+	
+56
+
+Slide 18- 57
+Database Concurrency Control
+Granularity of data items and Multiple Granularity Locking: An example of a serializable execution (continued):
+T1                          T2                                   T3
+                             unlock(p12)
+                             unlock(f1)
+                             unlock(db)                                                                                                                     
+unlock(r111)
+unlock(p11)
+unlock(f1)
+unlock(db)
+                                                                      unlock (r111j)
+                                                                      unlock (p11)
+                                                                      unlock (f1)
+                                                                      unlock(f2)
+                                                                      unlock(db)
+	
+
+	
+57
+
+Slide 18- 58
+Summary
+Concurrency control techniques
+Two-phase locking
+Timestamp-based ordering
+Multiversion protocols
+Snapshot isolation
+Data item granularity
+Locking protocols for indexes
+Phantom problem and interactive transaction issues
+58
+National University of Computer and Emerging Sciences, Lahore Campus 
+  
+
+	Course: 
+Program: 
+Instructor: 
+Practice Problems:
+	Advance Database Concepts  
+BS  
+Muhammad Ishaq Raza  
+CCT - SOLUTION
+	
+
+
+
+Topic: Concurrency Control Techniques 
+Q1. Consider the following schedule of actions listed in the order they are submitted to the DBMS: 
+ Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 
+For each of the following concurrency control mechanisms, describe how the concurrency control mechanism handles the schedule.  Assume that the timestamp of transaction Ti is i. For lock-based concurrency control mechanisms, add lock and unlock requests  to the above schedule of actions as per the locking protocol. The DBMS processes actions in the order shown. If a transaction is  blocked, assume that all its actions are queued until it is resumed; the DBMS continues with the next action (according to the  listed schedule) of an unblocked transaction. 
+a. Rigorous 2PL with timestamps used for deadlock avoidance (use wait-die policy) 
+b. Rigorous 2PL with timestamps used for deadlock avoidance (use wound-wait policy) 
+c. Rigorous 2PL with deadlock detection. (Show the wait-for-graph in case of deadlock) 
+d. Conservative 2PL 
+e. Basic Timestamp Ordering (TO) 
+f. Strict Timestamp Ordering (Strict TO) 
+g. Timestamp Ordering with Thomas’s Write Rule (TWR) 
+h. Multi-version Timestamp Ordering
+Ans: 
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 
+a) Rigorous 2PL with timestamps used for deadlock avoidance (using wait-die policy)  
+Transaction T1 Transaction T2 Transaction T3 
+s1-lock(X) 
+r1(X) 
+x2-lock(X)…abort due to T1, 
+Time
+x1-lock(Y)…wait  for T3 on Y 
+w1(Y)…wake-up c1, releases all locks unlock(X) 
+unlock(Y) 
+ & restart with same TS T2 can now be restart here. 
+x3-lock(Y) 
+w3(Y) 
+c3, releases all locks unlock(Y) 
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 
+b) Rigorous 2PL with timestamps used for deadlock avoidance (using wound-wait policy)  
+Transaction T1 Transaction T2 Transaction T3 
+s1-lock(X) 
+r1(X) 
+x2-lock(X)…wait 
+Time
+x1-lock(Y)…wound T3   
+w1(Y) 
+c1, releases all locks unlock(X) 
+unlock(Y) 
+ for T1 on X 
+w2(X)…wake-up 
+x2-lock(Y) 
+w2(Y) 
+c2, releases all locks unlock(X) 
+unlock(Y) 
+x3-lock(Y) 
+w3(Y) 
+abort due to T1 & restart with  same TS & releases all locks unlock(Y) 
+T3 can be restart here. 
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 c) Rigorous 2PL with deadlock detection. (Using wait-for-graph) 
+Transaction T1 Transaction T2 Transaction T3 
+s1-lock(X) 
+r1(X) 
+x2-lock(X)…wait 
+Time
+x1-lock(Y)…wait  for T3 on Y 
+w1(Y)…wake-up c1, releases all  locks 
+unlock(X) 
+unlock(Y) 
+ for T1 on X 
+w2(X)…wake-up x2-lock(Y) 
+w2(Y) 
+c2, releases all locks unlock(X) 
+unlock(Y) 
+x3-lock(Y) 
+w3(Y) 
+c3, releases all locks unlock(Y) 
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 
+d) Conservative 2PL: 
+Transaction T1 Transaction T2 Transaction T3 
+s1-lock(X) 
+x1-lock(Y) 
+r1(X) 
+w1(Y) 
+Time
+c1, releases all locks 
+unlock(X) 
+unlock(Y) 
+x2-lock(X) 
+x2-lock(Y) 
+w2(X) 
+w2(Y) 
+c2, releases all locks 
+unlock(X) 
+unlock(Y) 
+x3-lock(Y) 
+w3(Y) 
+c3, releases all locks 
+unlock(Y) 
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 
+e) Basic TO: 
+ Timestamps and versions of Objects T1 T2 T3 X Y 
+RTS WTS RTS WTS 
+{ } T0 { } T0 
+r1(X) 
+ w2(X) 
+ w2(Y) 
+ w3(Y) w1(Y), abort T1 
+& restart with new TS, 
+as WTS(Y)>TS(T1) 
+ c2 
+ c3  
+{T1} 
+ T2 
+ T2 T3
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 
+f) Strict TO: 
+ Timestamps and versions of Objects T1 T2 T3 X Y 
+RTS WTS RTS WTS 
+{ } T0 { } T0 
+r1(X) 
+ w2(X) 
+w2(Y) 
+ w3(Y), delay T3  until c2 or a2, as WTS(Y)<TS(T3) 
+w1(Y), abort T1 
+& restart with new TS, 
+as WTS(Y)>TS(T1) 
+ c2 
+ w3(Y), exe here c3  
+{T1} 
+ T2 
+ T2  T3
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 
+g) Timestamp Ordering with TWR: 
+ Timestamps and versions of Objects T1 T2 T3 X Y 
+RTS WTS RTS WTS 
+{ } T0 { } T0 
+r1(X) 
+ w2(X) 
+ w2(Y) 
+ w3(Y) w1(Y), ignore 
+this write operation 
+& continue. 
+C1 
+ c2 
+ c3  
+{T1} 
+ T2 
+ T2 T3
+Schedule S: r1(X), w2(X), w2(Y), w3(Y), w1(Y), c1, c2, c3 
+h) Multi-version Timestamp Ordering: 
+ Timestamps and versions of Objects T1 T2 T3 X Y 
+RTS WTS RTS WTS 
+{T0} T0 {T0} T0 
+r1(X) 
+ w2(X) 
+w2(Y) 
+ w3(Y) w1(Y), abort T1 
+& restart with new TS, 
+as RTS(Y)>TS(T1) 
+(otherwise late write  
+operation would invalidate a 
+read operation of younger.) 
+ c2 
+ c3  
+{T1} 
+{T2} T2 
+ {T2} T2 {T3} T2 T3 
+ T2 T2 T3  T3
+Q2. Consider the following schedule: indicate if it is valid according to 2PL (two-phase locking); Explain how. Also identify the  type of 2PL (basic, conservative, strict, rigorous) satisfied by the schedule, explain how. Also check if it successfully completes  or may result in a deadlock state, and how. 
+S: sl1(A); r1(A); xl2(B); r2(B); w2(B); xl1(B); c2; ul2(B); w1(B); c1; ul1(A); ul1(B); 
+Note: sl= Shared Lock, xl= Exclusive Lock 
+Ans:  
+The schedule is valid and implements rigorous 2PL as all locks are held until after commit. Note that T1 was forced to wait  for an exclusive lock on B until T2 committed. The schedule would successfully complete. 
+It is also conflict-serializable and view-serializable. 
+Q3. Consider the following schedule: 
+S: R1(X), W2(Y), R2(X), W1(Y), C1, C2 
+State which of the following concurrency control protocols allows it, that is allows the actions to occur in exactly the order  shown: Basic 2PL, Strict 2PL, Rigorous 2PL. Add appropriate lock before each read/write operation. Please provide a brief  explanation for your answer...If YES, show where the lock requests could have happened; If NO, explain briefly 
+Ans: 
+The schedule will be permitted by Basic 2PL, but not by Strict/Rigorous 2PL. This is because when T1 tries to request an  exclusive lock to write Y, T2 has not committed yet, and therefore has not released its exclusive lock on Y. It will be permitted  by Basic 2PL because then T2 can release the lock on Y immediately after it acquires a shared lock for X (prior to reading X).  Then T1 will be able to acquire its exclusive lock on Y. 
+It is also conflict-serializable and view-serializable. 
+Q4. Consider the following schedule: 
+S: r1(z);r1(y);w1(y); r2(y);r2(z); r3(x);w3(x); w2(y);w2(z); r1(x); r3(y);w3(y); r1(x).  
+a. Apply the rigorous 2PL to the above schedule and determine whether the protocol will allow the execution of the schedule.  Add appropriate lock before each read/write operation. Indicate what lock requests are denied and whether deadlock occurs,  explain how. Show the wait-for graph. If a deadlock occurs pick a younger transaction to abort and then continue. Indicate  what transactions would finish execution. 
+b. Apply the basic timestamp-ordering (assume T1 < T2 < T3) to the above schedule and determine whether the protocol will  allow the execution of the schedule. Indicate what transactions would finish execution. 
+Ans: Do it yourself.
+Q5. For the schedule S: r2(X), w3(X), c3, w1(Y), r2(Y), r2(Z), c2, r1(Z), c1. Show that schedule S will be accepted/rejected in  exactly the order shown by the below protocols. Provide proper reasons and show your work.  a. Basic 2PL (add locks to the transactions)  
+b. Basic Timestamp Ordering (Assume T1 < T2 < T3) 
+c. Strict Timestamp Ordering (Assume T1 < T2 < T3) 
+d. Optimistic Concurrency Control 
+Ans:  
+a. Basic 2PL (Reject);  
+Here xl3(X) cannot acquire due to sl2(X).  
+1- ABORT T3 for Deadlock Avoidance using wait-die scheme 
+2- WAIT T3 for sl2(X) to release for Deadlock Avoidance using wound-wait scheme 
+3- WAIT T3 for sl2(X) to release for Deadlock Detection (use wait-for-graph, in case of deadlock)  
+b. Basic TO (ACCEPT);  
+- w3(X) allow as T3 is younger than RTS of X (i.e. TS(T3) > RTS(X) ) 
+ - r2(Y) allow as T2 is younger than WTS of Y (i.e. TS(T2) > WTS(Y) ) 
+c. Strict TO (REJECT);  
+- r2(Y) delay until c1/a1; as T2 is younger than WTS of Y (i.e. TS(T2) > WTS(Y) ) 
+d. Optimistic (ACCEPT- incase T3 delay, Otherwise REJECT – incase T3 abort);  
+- T3 Forward Validation fails due to item X conflict with T2; so it may be delay or abort T3/T2.  - But the validation of T1 & T2 is successful, if T3 abort/delay until T2 commit.

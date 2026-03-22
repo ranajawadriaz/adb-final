@@ -1,0 +1,599 @@
+So, the incorrect write was one of the reasons. This means for correct processing, we need a DBMS concurrency control protocol. We need a program that monitors if a schedule is running in an incorrect order and stops it; otherwise, the results will be inconsistent.
+
+How is this happening? One transaction wrote an item, and it is not yet complete. Now, if it completes, it might commit or it might abort. There are two options. Transaction T1 could be successful or it could fail. If T2 reads its modified version, and if T1 is successful, then it is fine. But if T1 aborts, then the version T2 read is inconsistent. This is the issue.
+
+The concurrency control protocol will either stop this or not allow it to read at all. If a data item is updated by transaction T1, then no other transaction can read or write on that data item until T1 ends. It will put it in waiting; it will block it. Or, any other transaction may read the modified version of the transaction, but then it will place a check. If T2 has completed its work before T1, it cannot commit conditionally until T1 completes. It will wait for T1 to complete. This means T2 has completed all operations, but T1 is still continuing, so its dirty read is standing there. So, T2 said "commit me," but it won't get a commit reply yet; it is in waiting. It will wait for T1 to complete. If T1 commits successfully, then after that, T2’s request will also be accepted.
+
+If T1 aborts, then T2 ends too. So T2, or any other transaction that did a dirty read of it, will also automatically abort. This is called cascading rollback. That implies that all transactions that performed a dirty read will be rolled back if the one they read from aborts. It wasn't T2's problem, but because it did a dirty read of a transaction that aborted, it also aborted. This is cascading rollback.
+
+There are some schedules where cascading rollback happens, and there are cascadeless rollbacks where, if we don't allow dirty reads at all, cascading rollback will never happen. If we allow it, throughput will increase. T2 wasn't made to wait; we said, "read it immediately." We applied a condition. If it is mostly successful, our throughput will increase. Yes, there is overhead; if it aborts, you have to look into the log to see how many operations you did—CPU usage, IO usage, memory usage—and then abort. So, we see that if the conflict operation ratio is high, perhaps we shouldn't allow dirty reads.
+
+This leads to isolation levels. When we start a transaction, we set isolation levels: Read Uncommitted, Read Committed, Repeatable Read, and Serializable.
+
+In the "Read Uncommitted" mode, it means you have allowed a dirty read. You give permission, but we attach a condition that if you do a dirty read, you might be subjected to a cascading rollback. The one you did a dirty read from must complete first; if it commits, you commit. If it aborts, you abort.
+
+If you want strict isolation levels, the next level is "Read Committed." In this isolation level, dirty read is not allowed. Now, suppose there is a data item X with an initial value of 10. T1 changed it from 10 to 20. If "Read Uncommitted" was set, and T2 said "Read X," it would get the updated value of 20. That is a dirty read updated by T1. But if you have "Read Committed" as the isolation level, then when T2 reads, it will be allowed, but it will get the old version, which is committed. X has two versions: one committed version and one uncommitted version. If you do "Read Committed," even if transaction X is read by T2, the committed version (10) is given. This means in "Read Committed," a cascading rollback never happens because there is no dirty read. Now, whether T1 aborts or is successful, it does not impact T2.
+
+There is another isolation level: "Repeatable Read." In "Repeatable Read," if a data item X is updated by transaction T1, then no other transaction can read or write on that data until T1 commits or aborts.
+
+Now, consider a case where a transaction T1 read an item X and got a value of 10. After some time interval, the same transaction T1 read X again and got a value of 20. This means the same transaction, reading the same item at different times, got two different values. What does this mean? It means that between the two time intervals, some other transaction, T-prime, updated it. For example, asking for a student's CGPA and getting 3.1. Then, within the same transaction, asking again and getting 3.2. This means in between, another transaction T-prime updated that student's CGPA. This problem is called a "Non-Repeatable Read." You read the same transaction at two different times and used it in two different methods, so it should be the same. In such a case, this problem is created. Your read should be repeatable.
+
+If you set the isolation level to "Repeatable Read," the DBMS ensures that once a transaction T1 reads a CGPA, no other transaction will update it until this transaction ends. Other transactions may read the CGPA of the same student, but the same transaction T reading repeatedly will get the same value, like 3.1, because no one else updated it. This means the first time we read, the DBMS applies a read lock on that item so other users cannot update it. The lock is released when the transaction ends.
+
+So, we spoke about isolation levels. If you want to submit a transaction, you have the option to set any type of isolation level. This is a positive requirement we decide.
+
+We discussed transactions, and then there is a schedule, which we call history. Transactions are a set of N number of database access operations. Database access operations are Read Item and Write Item. Only two access operations: Read to retrieve data of a particular data item, and Write. A data item may be a single value of a record, it may be a whole record, or it may be a whole block. One data block may contain many records. Therefore, we say the smallest unit to store data on disk is one data block. One data block may contain N number of records. So in discussions, it can be Read Item X or Write Item X.
+
+Transactions involve two types of operations: Read Item and Write Item. Every transaction will have a Read Set (items read from the database) and a Write Set (items changed).
+
+A schedule is a set of N number of transactions. For example, if 100 users are connected and making requests, at a specific time interval, we say this is a schedule containing 100 transactions. Within 100 transactions, sometimes requests are from one user, sometimes from another, so there is different interleaving. We have to make sure that the request sent executes in the correct order.
+
+Let's look at a sample schedule. In this diagram, see there are four total schedules: A, B, C, and D. Which ones are serial? A and B. Here we check schedule A. First, which transaction is running? T1. Until T1 is complete, T2 does not start. This is serial. Whatever the result of Schedule A, it is correct. Then transaction T2 completes. In Schedule A, there are four database access operations: Read Item X, Write Item X, Read Item Y, Write Item Y. In the second transaction, there are two database access operations: Read X, Write X.
+
+Schedule B is also serial. T1 and T2 are the same transactions, but the schedule is: first T2 executes completely, then T1 executes. If there are two transactions, the possible serial schedules are 2 factorial, meaning 2. Schedule A is correct, and Schedule B is correct. If the state of the database is consistent before the schedule, then after the execution of Schedule A, the database state will always be consistent because there is no dirty read, cascading rollback, or conflict issue. However, throughput will be very poor.
+
+Schedules C and D are interleaved. First, we ran operation 1. Then an IO operation came, so we switched. We ran an operation of T2. Then two operations of T1 executed. This is interleaving.
+
+Now, regarding the result of Schedule C, should the DBMS accept it or not? If it is correct, it should accept it. If the result is equivalent to any serial schedule, it will work. The issue is that when the first operation ran, the system didn't know what the next operation would be or which transaction it would belong to. You execute the whole schedule first, then check the order? No.
+
+Here, when T2 read X, the next operation for which transaction will be accepted? Which one's IO operation will come? This is determined by the Concurrency Control Manager. There is a simple rule. It builds a graph. If a cycle forms in the graph, it means the order is not serializable. It checks operation by operation. When the first operation comes, is there an issue? No. As soon as a request comes, before accepting it, it checks if allowing this operation will cause a problem with any existing active transaction. If yes, it stops it. If no, it allows it.
+
+In this case, simply, transaction T1 creates a node. T2 creates a node. We handle this via a graph. T1 read X. No conflict. No other transaction is there. Then T2 started and read X. We created another node. Now we check: T1 read X. Is there any conflict? Two different users read the same item. Can a problem occur? For a conflict to occur, at least one write operation must exist. If T1 wrote X and then T2 read it, that is a conflict. Or if T1 read X and T2 said "write it," that is also a conflict.
+
+So, for a conflict operation, at least one write operation must be there, the data item must be the same, and the transactions must be different. Conflict will happen then. T1's conflict with T1 is not possible.
+
+Now, let's see where we reached. T1 read X, T2 read X. No conflict. Then T1 wrote X. Now check: Is there any other transaction that read or wrote X before this? Yes, T2 read X. This is a conflict. But wait, did T2 read X before T1 wrote X? Yes. If T1 wrote X, and T2 read X, that is a conflict.
+
+In the graph, we make an edge. In this conflict operation, who executed the operation first? T2. So the direction is from T2 to T1. An edge is created from I to J. I is the one who performed the conflicting operation first. So here, T2 read X, then T1 wrote X. Edge from T2 to T1.
+
+Next, T2 wrote X. Before this, did anyone read or write X? Yes, T1 read X. Wait, looking at the graph... T1 read X, then T2 wrote X. That is a conflict. Edge from T1 to T2. Now, a cycle is created. T2 to T1, and T1 to T2. Once the cycle is created, this schedule is not allowed. It is a Deadlock.
+
+This schedule guarantees that it is incorrect. It should not execute in this order. So, what is the remedy? The system handles it in different ways. One is deadlock detection. It sees a deadlock is created, so detection happens. Then, recovery. It picks one of them—either T1 or T2—and rolls it back/aborts it. The other continues. If T2 is aborted, the edge from T1 to T2 remains, but the edge from T2 to T1 finishes. The cycle breaks.
+
+Or, deadlock avoidance. We don't let the deadlock happen in the first place.
+
+This means if you want to verify a schedule, simply construct a Precedence Graph (or Serialization Graph). If there is a cycle in the graph, the schedule is not conflict serializable. If there is no cycle, it is conflict serializable. Conflict serializable means it is equivalent to a serial schedule. Its result will be correct.
+
+So, regarding the Read/Write conflict we discussed: If T1 read X and T2 wrote X, there is a conflict. An edge is drawn from T1 to T2. If T1 wrote X and T2 read X, there is a conflict. Edge from T1 to T2. If T1 wrote X and T2 wrote X, there is a conflict. Edge from T1 to T2. If T1 read X and T2 read X, there is no conflict.
+
+This is how we maintain correctness.
+
+... If we have a problem here, put it in waiting. Instead of restarting, have it wait. Once the latter one is complete and the conflict is resolved, then this [transaction] goes on. Request is that if it is blocked, then once [the other] completes, its blockage is removed. Now, give it a wake-up call. Now its conflict is finished. In this case, we blocked it; we didn't restart it. It stayed blocked, but after some time, once the resource was free, it got it.
+
+If this is blocked, and here at 3, X also requests a read. Block the block? Since the block is already there, then as soon as 1 is complete, who gets the wake-up call first? T2. Because 2 has a conflict with 3 as well. If 2’s conflict is resolved, then 3 gets the wake-up call. In this way, in a sequence, you grant access to the transactions. One says wait, the other says kill it or abort it. One says block it. Wait-Die or Wound-Wait schemes. Wait-Die means the older waits for the younger.
+
+Waiting... "Wait" always refers to the younger/older relationship. Will the cycle ever complete? Suppose transactions 1, 2, 3. Assume timestamp of 1 is less than timestamp of 2 and timestamp of 3. For every transaction, there is a timestamp. What is a timestamp? It is when the transaction starts. Either it is an integer value or the system clock. The system automatically generates a sequence. It’s essentially clock time.
+
+So, the transaction that starts first will have a smaller timestamp compared to the one that starts later. If transaction 1 started before 2, then the timestamp of 1 is less. So, if we talk about both, this one is older and that one is younger. The transaction that started earlier is older. The one that comes after is younger. Based on this, it resolves the conflict.
+
+I said that whenever a transaction comes and conflicts with another, if it is older... make it wait. Or, force the other to abort. If it is younger, then wait. "Wait-Die" means "Always 2 waits for 3's resource?" No, "Wait" implies that if an older transaction requests a resource held by a younger one, the older waits. One scheme says, "Older waits for the Younger." The other says, "Kill the younger."
+
+When this happens, check the graph. Will the cycle ever complete? No. That is the deadlock-free guarantee. But every protocol has its limitations or advantages. Its disadvantage is what? You didn't make the older one wait; instead, you aborted the older or younger one. But maybe later on, the problem wouldn't have occurred anyway. There was no guarantee, but you aborted it.
+
+In any case, concurrency control protocols differ. Optimistic concurrency control protocols... different protocols handle how to avoid this. These protocols will give a 100% guarantee that the resulting schedule in the interleaving processing will always allow the correct one. It will never allow the incorrect one.
+
+How do we determine performance? How do we know which protocol is better? If you have 10 valid correct schedules... suppose there are 3 transactions. In interleaved processing, there are many possible correct schedules. Maybe one protocol allows 8 of them, while understanding 2 as incorrect and rejecting them (false negatives). The schedule was correct, but due to the protocol's limitations, it rejected it. One protocol might reject 4, allowing only the others. That is poor.
+
+But there is no protocol that assumes a correct schedule is incorrect [and accepts an incorrect one]. That is a guarantee. Poor to poor means your protocol is strictly blocking. It guarantees 100%. How much time is it taking? How much space is it taking? Its complexity is high. The speed depends on the data size. If data size is large, one algorithm works well; if small, another works better. Or if the list is partially sorted, some algorithms work better, some don't check and resort anyway. It depends on the patterns.
+
+Okay, let's move on.
+
+Now, regarding the reading we were doing... Transaction 2. This point is your next lab experiment. The things we are discussing, whether new or not, it doesn't matter. The method is important. Just assume the balance is 4000. It doesn't matter if it's explicitly part of the lab or not. What matters is, are you viewing the data correctly? Is the view correct?
+
+[Student question regarding isolation levels/requirements]
+
+The examples you are referring to... different isolation levels are chosen based on requirements. I will provide examples for that which you will see yourself.
+
+[Student asks about "Blind Writes"]
+
+Blind write. Blind write means writing without reading. You have two sessions open. In one, user A is active, in the other user B. B says, "Update student GPA." And another user says, "Change Ahmed's contact number." First user changed X. Second changed Y. Now the first user says "Read Y." Now, check the contact number that was changed. Which one does he get? The old one or the new one? Committed or uncommitted?
+
+So, without any isolation level, this indicates your DBMS by default checks some isolation level. Some default is always there. Usually, it is "Read Committed."
+
+Now, looking at the contact number... assume the contact number was 1, 2, 3 changed by Y. Then changed to 3, 2, 1. When User A reads it, he gets 1, 2, 3. He doesn't get the edited one. And then see... User A says his contact number is 9. He updated it. Y also updated it.
+
+User B says "Change his CGPA," which was previously changed by A. This cycle completes. In Request 1, Request 2. Since both have rights, this conflict comes here. But as soon as 2 requests to change item 1... Deadlock is created. When you check the deadlock graph, for some time, both processes will block. The user asking to change the phone number... blocked. The user asking to change CGPA... blocked. Wait for who? For the "Unlock."
+
+Two is waiting for One. And One is waiting for Two. It's a Deadlock. You will check that immediately the DBMS detects the deadlock and one victim is selected. The other session gets a "Deadlock detected" message. The first session will proceed. One will be rolled back. The system will automatically kill one session.
+
+Waiting... usually, older/younger waiting is the rule.
+
+Will the cycle complete? No.
+
+Let's assume transaction 1, 2, 3. Assume timestamp 1 is less than timestamp 2 and 3. For every transaction, there is a timestamp. The one starting first is older.
+
+[Student Question]
+
+Yes, question?
+
+[Student speaks about distinct isolation levels and requirements depending on use case]
+
+Their examples... I will have you do those yourself.
+
+[Discussion shifts to the board/specific schedule]
+
+Schedule D. Draw its graph. What is it? Attempt to check the conflict serialization. Draw the graph.
+
+[Pause for students to draw]
+
+First transaction T1. First operation. Then second. Then third operation. In this schedule, how many operations are there? Six. And T1 has four. And T2 has two. And in any valid schedule, you cannot change the order of operations of a transaction. The system won't change it. This operation will never run before this one.
+
+However, it is possible that between these two operations, someone else's operation runs. But in these two operations, this read is before this read? No.
+
+If you are asked to correct the order of this schedule so it is correct... what will you change?
+
+[Student answers]
+
+Delay it. Delay T2. Delay it until T1 is complete so there is no conflict.
+
+[Discussion on "Read Y" and "Write X"]
+
+This "Read Y"... is it waiting for X? No. Does it have a problem with X? No. These two, if we make this one early (the Read Y of T2), does it affect the logic? No.
+
+If T1 writes X, then T2 reads Y... does T2 read X? No. So if we move T2's "Read Y" up, does it affect anything? No.
+
+This schedule D... draw the graph.
+
+[Students working]
+
+Is there a cycle?
+
+So, this schedule is "Correct." Correct means Serializable.
+
+Now check the dependency. First, T1... then T2. Then T1 again.
+
+Look at the Read/Write conflicts. T1 Read X. T2 Read X? No. T2 Read Y? No. No conflict.
+
+T1 Write X. T2 Read Y? No. T2 Write Y? No.
+
+T2 Read Y. T1 Read Y? No conflict.
+
+T2 Write Y. T1 Read Y? Yes. There is a conflict. Between T2 and T1. Who performed the operation first? T2 wrote Y. Then T1 read Y. So, the edge is from T2 to T1.
+
+Next. T1 Write Y. T2 Write Y? Yes. Conflict. Who did it first? T2. So T2 to T1.
+
+Is there any other conflict? No.
+
+So the graph is T2 -> T1. Is there a cycle? No.
+
+So this schedule is equivalent to a serial schedule. Which serial schedule? T2 followed by T1.
+
+This means if I run the serial schedule (T2 then T1), the result is exactly the same as schedule D.
+
+But what is the difference? Throughput. In the serial schedule, you utilized the CPU idle time effectively here. This schedule D is Serializable.
+
+[Attendance Roll Call]
+
+[Lecturer calls names, Students respond "Present"]
+
+Saad? Present. Moosa? Present. Asif? (No response/Absent). Abdul Wahab? Present. Abdul Raheem? Present. Abbas? Present. Waseem? Present. Saad Ahmed? Present. Muzammil? Present. Asad? Present. Shifa? Present. Ali Husnain? (No response). Ziyad? Present. Hassan? Present. Noor? (No response). Haniya? Present. Anas? (No response). Daniyal? Present. Shahjeer? Present. Waleed? Present. Mashhood? (No response). Hamza? Present. Zeeshan? (No response). Muneeb Ahmed? Present. Huzaifa? (No response). Taha? (No response). Aimen? Present. Adeel? Present. Usha? Present. Talha? Present. Maaz? Present. Haseeb? Present. Amina? Present. Taimoor? Present. Aiman? Present. Jawad? Present. Samad? Present. Hamiza? Present. Muqadas? Present. Noor? Present. Hadeed? Present. Sara? (No response). Uswa? (No response). Mahween? (No response). Mehreen? (No response). Hadeed? Present. Hamza? Present. Areeba? Present. Mariya? (No response).
+
+Okay. That's it.
+
+
+
+Introduction to Transaction Processing Concepts and Theory
+
+Introduction
+Transaction
+Describes logical unit of database processing
+Transaction processing systems
+Systems with large databases and hundreds of concurrent users
+Require high availability and fast response time
+Slide 20- 2
+
+20.1 Introduction to Transaction Processing
+Single-user DBMS
+At most one user at a time can use the system
+Example: home computer
+Multiuser DBMS
+Many users can access the system (database) concurrently
+Example: airline reservations system
+
+Slide 20- 3
+
+Introduction to Transaction Processing (cont’d.)
+Multiprogramming
+Allows operating system to execute multiple processes concurrently
+Executes commands from one process, then suspends that process and executes commands from another process, etc.
+
+
+Slide 20- 4
+
+Introduction to Transaction Processing (cont’d.)
+Interleaved processing
+Parallel processing
+Processes C and D in figure below
+Slide 20-5
+Figure 20.1 Interleaved processing versus parallel processing of concurrent transactions
+
+Transactions
+Transaction: an executing program
+Forms logical unit of database processing
+Begin and end transaction statements
+Specify transaction boundaries
+Read-only transaction
+Read-write transaction
+Slide 20- 6
+
+Database Items
+Database represented as collection of named data items
+Size of a data item called its granularity
+Data item
+Record
+Disk block
+Attribute value of a record
+Transaction processing concepts independent of item granularity
+Slide 20- 7
+
+Read and Write Operations
+read_item(X)
+Reads a database item named X into a program variable named X
+Process includes finding the address of the disk block, and copying to and from a memory buffer
+write_item(X)
+Writes the value of program variable X into the database item named X
+Process includes finding the address of the disk block, copying to and from a memory buffer, and storing the updated disk block back to disk
+
+
+Slide 20- 8
+
+Read and Write Operations (cont’d.)
+Read set of a transaction
+Set of all items read
+Write set of a transaction
+Set of all items written
+Slide 20- 9
+Figure 20.2 Two sample transactions (a) Transaction T1 (b) Transaction T2
+
+DBMS Buffers
+DBMS will maintain several main memory data buffers in the database cache
+When buffers are occupied, a buffer replacement policy is used to choose which buffer will be replaced
+Example policy: least recently used
+Slide 20- 10
+
+Concurrency Control
+Transactions submitted by various users may execute concurrently
+Access and update the same database items
+Some form of concurrency control is needed
+The lost update problem
+Occurs when two transactions that access the same database items have operations interleaved
+Results in incorrect value of some database items
+Slide 20- 11
+
+The Lost Update Problem
+Slide 20-12
+Figure 20.3 Some problems that occur when concurrent execution is uncontrolled (a) The lost update problem
+
+The Temporary Update Problem
+Slide 20-13
+Figure 20.3 (cont’d.) Some problems that occur when concurrent execution is uncontrolled (b) The temporary update problem
+
+The Incorrect Summary Problem
+Slide 20-14
+Figure 20.3 (cont’d.) Some problems that occur when concurrent execution is uncontrolled (c) The incorrect summary problem
+
+The Unrepeatable Read Problem
+ 
+Slide 20- 15
+
+Why Recovery is Needed
+Committed transaction
+Effect recorded permanently in the database
+Aborted transaction
+Does not affect the database
+Types of transaction failures
+Computer failure (system crash)
+Transaction or system error
+Local errors or exception conditions detected by the transaction
+Slide 20- 16
+
+Why Recovery is Needed (cont’d.)
+Types of transaction failures (cont’d.)
+Concurrency control enforcement
+Disk failure
+Physical problems or catastrophes
+System must keep sufficient information to recover quickly from the failure
+Disk failure or other catastrophes have long recovery times
+Slide 20- 17
+
+20.2 Transaction and System Concepts
+System must keep track of when each transaction starts, terminates, commits, and/or aborts
+BEGIN_TRANSACTION
+READ or WRITE
+END_TRANSACTION
+COMMIT_TRANSACTION
+ROLLBACK (or ABORT)
+Slide 20- 18
+
+Transaction and System Concepts (cont’d.)
+Slide 20-19
+Figure 20.4 State transition diagram illustrating the states for transaction execution
+
+The System Log
+System log keeps track of transaction operations
+Sequential, append-only file
+Not affected by failure (except disk or catastrophic failure)
+Log buffer
+Main memory buffer
+When full, appended to end of log file on disk
+Log file is backed up periodically
+Undo and redo operations based on log possible
+Slide 20- 20
+
+Commit Point of a Transaction
+Occurs when all operations that access the database have completed successfully
+And effect of operations recorded in the log
+Transaction writes a commit record into the log
+If system failure occurs, can search for transactions with recorded start_transaction but no commit record
+Force-writing the log buffer to disk
+Writing log buffer to disk before transaction reaches commit point
+Slide 20- 21
+
+DBMS-Specific Buffer Replacement Policies
+Page replacement policy
+Selects particular buffers to be replaced when all are full
+Domain separation (DS) method 
+Each domain handles one type of disk pages
+Index pages
+Data file pages
+Log file pages
+Number of available buffers for each domain is predetermined
+Slide 20- 22
+
+DBMS-Specific Buffer Replacement Policies (cont’d.)
+Hot set method
+Useful in queries that scan a set of pages repeatedly
+Does not replace the set in the buffers until processing is completed
+The DBMIN method
+Predetermines the pattern of page references for each algorithm for a particular type of database operation
+Calculates locality set using query locality set model (QLSM)
+Slide 20- 23
+
+20.3 Desirable Properties of Transactions
+ACID properties
+Atomicity
+Transaction performed in its entirety or not at all
+Consistency preservation
+Takes database from one consistent state to another
+Isolation
+Not interfered with by other transactions
+Durability or permanency
+Changes must persist in the database
+Slide 20- 24
+
+Desirable Properties of Transactions (cont’d.)
+Levels of isolation
+Level 0 isolation does not overwrite the dirty reads of higher-level transactions
+Level 1 isolation has no lost updates
+Level 2 isolation has no lost updates and no dirty reads
+Level 3 (true) isolation has repeatable reads
+In addition to level 2 properties
+Snapshot isolation
+Slide 20- 25
+
+20.4 Characterizing Schedules Based on Recoverability
+Schedule or history
+Order of execution of operations from all transactions
+Operations from different transactions can be interleaved in the schedule
+Total ordering of operations in a schedule
+For any two operations in the schedule, one must occur before the other
+Slide 20- 26
+
+Characterizing Schedules Based on Recoverability (cont’d.)
+Two conflicting operations in a schedule
+Operations belong to different transactions
+Operations access the same item X
+At least one of the operations is a write_item(X)
+Two operations conflict if changing their order results in a different outcome
+Read-write conflict
+Write-write conflict
+Slide 20- 27
+
+Characterizing Schedules Based on Recoverability (cont’d.)
+Recoverable schedules
+Recovery is possible
+Nonrecoverable schedules should not be permitted by the DBMS
+No committed transaction ever needs to be rolled back
+Cascading rollback may occur in some recoverable schedules
+Uncommitted transaction may need to be rolled back
+Slide 20- 28
+
+Characterizing Schedules Based on Recoverability (cont’d.)
+Cascadeless schedule
+Avoids cascading rollback
+Strict schedule
+Transactions can neither read nor write an item X until the last transaction that wrote X has committed or aborted
+Simpler recovery process
+Restore the before image
+Slide 20- 29
+
+20.5 Characterizing Schedules Based on Serializability
+Serializable schedules
+Always considered to be correct when concurrent transactions are executing
+Places simultaneous transactions in series
+Transaction T1 before T2, or vice versa
+Slide 20- 30
+
+Slide 20-31
+Figure 20.5 Examples of serial and nonserial schedules involving transactions T1 and T2 (a) Serial schedule A: T1 followed by T2 (b) Serial schedule B: T2 followed by T1 (c) Two nonserial schedules C and D with interleaving of operations
+
+Characterizing Schedules Based on Serializability (cont’d.)
+Problem with serial schedules
+Limit concurrency by prohibiting interleaving of operations
+Unacceptable in practice
+Solution: determine which schedules are equivalent to a serial schedule and allow those to occur
+Serializable schedule of n transactions
+Equivalent to some serial schedule of same n transactions
+Slide 20- 32
+
+Characterizing Schedules Based on Serializability (cont’d.)
+Result equivalent schedules
+Produce the same final state of the database
+May be accidental
+Cannot be used alone to define equivalence of schedules
+Slide 20- 33
+Figure 20.6 Two schedules that are result equivalent for the initial value of X = 100 but are not result equivalent in general
+
+Characterizing Schedules Based on Serializability (cont’d.)
+Conflict equivalence
+Relative order of any two conflicting operations is the same in both schedules
+Serializable schedules
+Schedule S is serializable if it is conflict equivalent to some serial schedule S’.
+
+Slide 20- 34
+
+Characterizing Schedules Based on Serializability (cont’d.)
+Testing for serializability of a schedule
+
+Slide 20- 35
+Algorithm 20.1 Testing conflict serializability of a schedule S
+
+Characterizing Schedules Based on Serializability (cont’d.)
+Slide 20-36
+Figure 20.7 Constructing the precedence graphs for schedules A to D from Figure 20.5 to test for conflict serializability (a) Precedence graph for serial schedule A (b) Precedence graph for serial schedule B (c) Precedence graph for schedule C (not serializable) (d) Precedence graph for schedule D (serializable, equivalent to schedule A)
+
+How Serializability is Used for Concurrency Control
+Being serializable is different from being serial
+Serializable schedule gives benefit of concurrent execution
+Without giving up any correctness
+Difficult to test for serializability in practice
+Factors such as system load, time of transaction submission, and process priority affect ordering of operations
+DBMS enforces protocols
+Set of rules to ensure serializability
+Slide 20- 37
+
+View Equivalence and View Serializability
+View equivalence of two schedules
+As long as each read operation of a transaction reads the result of the same write operation in both schedules, the write operations of each transaction must produce the same results
+Read operations said to see the same view in both schedules
+View serializable schedule 
+View equivalent to a serial schedule
+Slide 20- 38
+
+View Equivalence and View Serializability (cont’d.)
+Conflict serializability similar to view serializability if constrained write assumption (no blind writes) applies
+Unconstrained write assumption
+Value written by an operation can be independent of its old value
+Debit-credit transactions
+Less-stringent conditions than conflict serializability or view serializability
+Slide 20- 39
+
+20.6 Transaction Support in SQL
+No explicit Begin_Transaction statement
+Every transaction must have an explicit end statement
+COMMIT
+ROLLBACK
+Access mode is READ ONLY or READ WRITE
+Diagnostic area size option
+Integer value indicating number of conditions held simultaneously in the diagnostic area
+Slide 20- 40
+
+Transaction Support in SQL (cont’d.)
+Isolation level option
+Dirty read
+Nonrepeatable read
+Phantoms
+
+Slide 20- 41
+Table 20.1 Possible violations based on isolation levels as defined in SQL
+
+Transaction Support in SQL (cont’d.)
+Snapshot isolation
+Used in some commercial DBMSs
+Transaction sees data items that it reads based on the committed values of the items in the database snapshot when transaction starts
+Ensures phantom record problem will not occur
+
+Slide 20- 42
+
+20.7 Summary
+Single and multiuser database transactions
+Uncontrolled execution of concurrent transactions
+System log
+Failure recovery
+Committed transaction
+Schedule (history) defines execution sequence
+Schedule recoverability
+Schedule equivalence
+Serializability of schedules
+Slide 20- 43
+
+National University of Computer and Emerging Sciences, Lahore Campus 
+  
+
+	Course: 
+Program: 
+Instructor: 
+Practice Problems: 
+	Advance Database Concepts 
+BS (Computer Science) 
+Muhammad Ishaq Raza 
+Transactions - Solution
+	
+
+
+
+Topic: Transaction Processing Concepts 
+Q1. Determine whether each schedule is strict, cascadeless, recoverable, or non-recoverable. Provide  proper reason.  
+S1: r1(X); w1(X); r1(Y); w1(Y); r2(X); w2(X); C2; C1; 
+S2: r1(X); w1(X); r1(Y); w1(Y); r2(X); C1; w2(X); C2; 
+S3: r1(X); r2(X); w1(X); r1(Y); w1(Y); w2(X); C1; C2; 
+S4: r1(X); r2(X); w1(X); r1(Y); w1(Y); C1; w2(X); C2; 
+S5: r2(X); r1(X); w2(X); C2; w1(X); r1(Y); w1(Y); C1; 
+ANSWER:  
+S1: r1(X); w1(X); r1(Y); w1(Y); r2(X); w2(X); C2; C1; NON RECOVERABLE 
+S2: r1(X); w1(X); r1(Y); w1(Y); r2(X); C1; w2(X); C2; RECOVERABLE 
+S3: r1(X); r2(X); w1(X); r1(Y); w1(Y); w2(X); C1; C2; CASCADELESS 
+S4: r1(X); r2(X); w1(X); r1(Y); w1(Y); C1; w2(X); C2; STRICT 
+S5: r2(X); r1(X); w2(X); C2; w1(X); r1(Y); w1(Y); C1; STRICT 
+Q2. Consider the following schedule of four transactions T1, T2, T3, and T4. 
+S: r1(A); r4(A); w1(A); w3(B); r2(A); r2(B); w2(C); r4(B); r4(C); r2(D); r3(E). 
+Draw the serializability (precedence) graph for this schedule. State whether this schedule is conflict serializable or not. If the schedule is conflict-serializable, write down the equivalent serial schedule(s)  otherwise explain why it is not. 
+ANSWER:  
+Not conflict serializable; cycle exist T1🡪T2🡪T4🡪T1
+  
+
+Q3. Consider the three transactions T1, T2, and T3, and the schedules S1 and S2 given below. S1: r2(X); w3(X); w1(Y); r2(Y); r2(Z); r3(Y); r1(Z);  
+S2: r1(X); w2(X); r3(X); w1(X); w3(X);  
+Draw the serializability (precedence) graphs for S1 and S2, and state whether each schedule is conflict serializable or not and view-serializable or not. If the schedule is serializable, write down the equivalent  serial schedule(s) otherwise explain why it is not. 
+ANSWER:  
+Clearly, there exists no cycle in the precedence graph. Therefore, the given schedule S1 is conflict serializable. Thus, we conclude that the given schedule S1 is also view-serializable. Equivalent serial  schedule is T1🡪T2🡪T3. Edges in graph: T1--Y-->T2, T1--Y-->T3, & T2--X-->T3.  
+Clearly, there exists a cycle in the precedence graph. Therefore, the given schedule S2 is not conflict serializable. The given schedule S2 is view-serializable and serialization order is T1🡪T2🡪T3.  
+  
+
+Q4. Given these transactions find the following schedules (if possible): 
+T1: r1(A); r1(B); w1(B); w1(A); c1; 
+T2: r2(B); w2(B); c2; 
+T3: r3(B); w3(B); B=B+2; w3(B); c3; 
+a. A recoverable schedule with cascade-rollback and lost update problem.  
+b. A cascade-free but not strict schedule. 
+ANSWER:  
+a) 
+r1(A); 
+r1(B);  
+w1(B); 
+w1(A);  
+c1;
+	r2(B); 
+w2(B);  
+c2; 
+	r3(B); 
+w3(B); 
+B=B+2; w3(B); 
+c3;
+	
+
+
+
+b) 
+r1(A); 
+r1(B);  
+ w1(B); 
+w1(A);  
+c1;
+	r2(B); 
+w2(B);  
+c2;
+	r3(B); 
+w3(B); 
+B=B+2; w3(B); 
+c3;

@@ -1,0 +1,185 @@
+It hasn't started yet. You would call it an active transaction. This means [it represents the state] when the system was running. Before, just before the system crashed, there may exist many transactions which are still active. And similarly, there may exist some transactions which are committed, but their effect has not been written to the database yet. He [the system designer/manager] said, 'Okay, when 10 transactions complete, we will write the effect of all of them at one time so that the throughput increases.'
+
+And other users obviously need the modified pages of those transactions. So if we write [to disk], there will be a need again. To increase throughput, we let them stay in the cache for some time. When there is a need, people will access it from the cache, so the cache hit ratio increases. The better the cache hit ratio, the fewer I/O operations there will be. This means the response time of your query will be very good.
+
+So the cache manager creates this strategy to improve its performance and fine-tune the system. It handles cache management differently. For example, there is a method called 'hotspot'. It uses that. Those blocks which users are frequently accessing, it won't keep putting them back [on disk]. It will let them stay. Because the buffer on one stage will become full—it’s limited space. If you delay more, what will happen? The chances of the buffer becoming full will increase. If you delay less, then what will happen? The cache hit ratio will decrease, and you will be doing I/O operations repeatedly.
+
+So how much can you defer? That also will have a defined threshold, or you will see the frequency of updates in your transactions. In any case, if your database buffer cache becomes full, there is a need to release some space. We have to pick up some blocks from it and put them back on the disk. Which ones will we pick? Let’s say we pick the 'least recently used' blocks. We certainly won't pick those blocks which are frequently required by us. The hotspot method will identify and predict that 'these blocks are required by us; don't pick these.' You can pick the others—do victim selection on them—so that the cache hit ratio improves.
+
+Or a 'data mint' method. Forecast beforehand which blocks users need and bring them [into cache] even before the request. Like we know the registration week is going to start, registration is going to open today. So what information will users frequently access? Prefetch that related to it. That is a block. That also increases the cache hit ratio. Or make separate segments for your blocks—separate for the database, separate for the cache, separate the log cache, and separate the indexing cache—give each one separate space.
+
+The point is, there are different methods to manage the cache. The ultimate goal is to improve the cache hit ratio, which increases throughput. But when we delay updates, there is a risk: the system will crash, and the things lying in the cache will be lost.
+
+Now coming back, assume that at this moment you have some transactions... if... suppose... here your system crashed. This was time T1. Before this, this transaction T1 started and ended here. Then there is your transaction T2. It started, and it is still running [when the crash happened]. And similarly, this transaction T3—it started and also ended. Meaning it got committed. T1 also. Similarly, T4... T5... these are the transactions. In this, we saw that for some transactions... at time T1... let me change T1 a little bit.
+
+T1 is a time where the last checkpoint occurred. Checkpoint is a background process. When a checkpoint occurs, what happens? The modified blocks in the database buffer cache are picked up and written to the database file on the disk. So if we have set the checkpoint interval to be after 'N' number of transactions or after 'T' time... you can mention in both option parameter files when configuring the database that 'your checkpoint should come when 10 transactions are complete.'
+
+Okay. When 10 transactions are committed, then the checkpoint will occur. And when the checkpoint occurs, it will signal the database writer—which is another background process—that 'now write the pages of your modified blocks to the disk.' Or time 'T', meaning a 5-second interval. So you have a threshold. Either if 10 transactions happen within 3 seconds, 10 transactions complete, the checkpoint will occur. Or... only three transactions completed, but your 5 seconds are up. Still, the checkpoint will occur. If any one of these conditions is met, the checkpoint will occur.
+
+Checkpoint occurring means that your checkpoint will signal the database writer to write the modified blocks in your cache to the disk. We talked about this: the last checkpoint was at this time. This means all the modified pages from transactions before this have been written to the disk. And maybe T1's and T2's [modifications]—T2 also modified something—it wasn't complete yet, but its [changes] were also written.
+
+Now we know that if the system crashes, T2 was still active, right? If its effect was stored, the atomic property says 'reverse this.' Right? Because for the transaction that did not complete, you stored its partial effect on the disk. If the system crashes, that transaction will be considered failed. Its write values... all will be undone. In the reverse order in which they were written. So that the last operation is undone first, and so on... so that the state before that failed transaction is recovered.
+
+In this scenario, if we look... Recovery Manager... Here is time T1, the checkpoint came at T1. And if a checkpoint had come here too... the last successful checkpoint would be this one at T2. Here at T2, a checkpoint could have come. If suppose it had come, then what would happen? Which transactions... these modified ones. Which modified pages would be written? The ones after the last successful checkpoint and up to this checkpoint. Those modified pages would be written. The ones before that had already been written; they won't be repeated. These modified pages would go.
+
+Now we say, no, at time T2 the system crashed. Now tell me, for which... and we know T3 and... T3 was a transaction that had completed. We have guaranteed it. And who else have we guaranteed? T1. But the last successful checkpoint... T1 completed before that. This means it must have been written. We don't need to include it in recovery. Ignore it from the recovery process. Otherwise time is wasted. If you do recovery, the operations will just be redone, and the result will be the same. So the recovery process, even if you repeat it 10 times, the result is the same, but time is wasted.
+
+This means the Recovery Manager first has to see which transactions are the ones that need recovery. Which ones will need recovery? Two, three, four, and five. If any transaction was committed after the last successful checkpoint... and those transactions which were active before the system crash. They will need recovery. Which ones committed after the last checkpoint? T3. So that will go into your 'Commit List'—that 'I have to recover this.' But the ones we put in the commit list... redo all its operations. The user will not resubmit it. All its operations will go back in the same sequence in which they were sent. Where will it get the cache from? We will talk about that later. But it put this in the commit list.
+
+And one is the 'Active List.' That list will be created. All transactions which are in an active state before the system crash. Which are those? Two, four, and five. Even though this started before the last checkpoint, it is still active. It is a large transaction. The ones that are active are: Two, Four, and Five.
+
+So the Recovery Manager immediately, when the system crashes, has to recover the database from an inconsistent state to a consistent state. It is its duty. And for that, it normally maintains two lists. After this comes the Concurrency Control Protocol. We will see how that works, what kind of concurrency control protocols and techniques there are. Then the database recovery comes after that.
+
+Okay. Rollback with protocols and techniques. We will see that. Right now we are saying that this system crashed. After the crash, the Recovery Manager immediately constructed these two lists: 'Which transactions do I have to recover?' These four transactions. Among them, which is the transaction we had guaranteed? The user will not resubmit it. It is considered completed. Put it in the commit list. We saw that [it's the one] committed after the last successful checkpoint. And the one that was still active... put it in the list. And the one that committed before the last checkpoint—like T1 or T0—that gets ignored. It doesn't need recovery. It has reached its place when the checkpoint arrived.
+
+Like if at time T2, a checkpoint occurs... crash doesn't happen... then which transactions... T2, T3... this also reaches its place [on disk]. Complete. So what will we do with the active ones? Their operations... this means they hadn't completed yet. So all their partial effects... we have to undo all of that. So the transactions in the Active List, we will undo them. And the atomic property remains valid. And durability too. We said 'Once a transaction is committed, it cannot be rolled back followed by any system crash.' You said, 'This is committed, guaranteed, it is complete.' It is durable. ACID properties. Atomic and Durable. These two properties are guaranteed by the Database Recovery Protocol. The two properties, Isolation and Consistency... Concurrency Control Protocol has the responsibility for those. It guarantees them.
+
+Sir, if T3 read data from T2, and T3 is in the commit list, and it read some such data that came to it from T2... then T2 will be rolled back. So in this case, didn't T3 read dirty data?
+
+We will see that when we go into details of concurrency. But remember one thing, the fundamental concept: Once a transaction is committed, it cannot be rolled back. If a transaction has a mess with T2... then the system won't let it commit. Because if it gets committed, it won't be rolled back. If T3 has done a dirty read of T2, it won't get permission to commit until T2 completes. It will remain waiting. Ah, T2 fails... then T3 will cascade rollback. If a transaction has a conflict with someone, either it will be blocked... successful won't happen before that. So we are saying T1 didn't have a problem, so it was accepted. T3 committed; this means it didn't have a problem with anyone. Otherwise, it wouldn't have committed.
+
+So take a little pause... I will show you a state diagram so that the transaction list becomes clearer. Let me open the laptop. [Background noise/setup].
+
+Look at the diagram on the screen. Whenever a transaction starts... a unique number is assigned to the transaction. Unique number generates either from clock time or it is an integer value. But every transaction will have a number lower than the next transaction. Meaning the new transaction has a greater number. This means T1's timestamp is less than T2. They will never be at the same time. This is called 'total ordering.' One transaction has a small time stamp than the other transaction.
+
+So whenever there are two transactions, one will be younger, one will be older. In two transactions, the one that started first will be older. The one after will be younger. This means the one coming later will have a larger timestamp or integer value. If one got number 1, the one coming later gets 2, then 3. So 2 and 3... whenever two transactions conflict, one will be older, one younger. Both times... one is less, one is greater. Not equal. This is called Total Ordering. So the system, whenever it assigns a number in a specific timeframe, it will make sure the number is unique and no identifier repeats. It solves the problem using that.
+
+Begin Transaction. Active Transaction State. It will remain in that state until all read or right operations of a transaction are complete. The transactions that were active... possibly its operations were 10, some completed... failed from here, abort... it will be considered failure. Failed. Transaction terminated. Terminated from which state? Active. It failed. This means if this transaction wrote any effect to the database... partial effect... that should be undone.
+
+Like here, the system crashed, so some transactions were active. Like this one. If the recovery manager checks this... if we wrote its partial effect to the database... it is undone. Two things are there to improve throughput. One is that transactions completed, but still we didn't write its effect to the database. Delayed. The other case... the other extreme... a transaction is still active, not even completed, but we wrote some of its effect to the database beforehand. meaning... we are writing 'too late'—after committing, we are still giving it some time... or we are writing 'too early'—it hasn't completed, out of its 10 pages some operations happened, we wrote some 4 operations.
+
+Why are we doing this? To improve throughput. Why are we stealing pages from active transactions? So that we can release some space in the database buffer cache. Which buffers to pick? That is the strategy. We make sure to pick those blocks which have less chance of being accessed in the future.
+
+Just a question... Is it looking at the crash or the active list? Is it looking at both things at the checkpoint?
+
+When a crash happens... the last successful checkpoint is marked. After this, whatever happened, we have to recover it. Recovery... what do we have to do? This part. If the system hadn't crashed, and the checkpoint had come, we would have written this. Now when it crashed, the problem arose that after this last checkpoint... before the system crash... if any transactions completed... repeat their operations. Repeat history. Do not ask the user to resubmit. Once a transaction is committed, it cannot be rolled back... You guaranteed 'it is completed.' It is durable.
+
+We have, for our ease, to improve throughput... if we stole T3, T4, T5's operations... from active transactions... and wrote them to the database file... active transaction's operations completed before getting committed... we write them to the database file... The partial effect we can store. And sometimes it happens that after committing we delay. We say, 'It's complete, but it's not written yet. It's lying in the buffer.' We are waiting for the checkpoint to occur. But it crashed. So we guaranteed it. So what we did... Active state... T3's all operations completed, ended. When it ended, it's not final yet. Partially committed. Now checking here... does it have a problem with anyone else? Concurrency control protocols enforce that... cascade rollback happens.
+
+This transaction aborts. The transaction's log... Lock... Lock is of two types. One is the lock on the disk. That is called 'Log File.' Number two is 'Log Buffer Cache.' Just like 'Database File' and 'Database Buffer Cache.' Just like 'Data File' where all the data of your Flex tables lies, and the file system manages it... control goes to the DBMS. So a database is a file, a database file, and a log file. The log contains history, and the database file contains actual data.
+
+Meaning if I changed X from 10 to 20. The database file will contain 20. The old value won't be there; it gets replaced. What will be in the log? X's before-image value was 10, and the after-image value is 20. Because whoever wrote... if it was active, and the system crashed, I need the old value. And whoever wrote and it committed, I need the new value. So for recovery, I might need undo, and I might need redo. So in the log, we keep both values. One value changes 10 times, so 10 times... first value what was it, second... In the log, there is a complete history. Every change, we keep in the log so that when we need it, we can replay it.
+
+So this was the point... what lies on the disk is the file. Log file and Database file. To process the Database file, it first comes into the cache. Then into the Database cache... and then Log Buffer cache. In the database, actual database contents come. In the log buffer cache, the log comes.
+
+Now you said to write X from 10 to 20. In the disk it was 10, you made it 20 in the database cache. But in the log buffer cache... X's 10 is also there and 20 is also there. Both before-image value and new-image value. Both are there.
+
+So the log file is sequentially written. Whatever transactions, whatever operation comes... whenever any operation of any transaction comes... log is sequentially written. When the log buffer cache becomes full, we pick that up and append it to the log file. So in the log file, we keep appending to what you write in the cache. So we keep making backups of the log file time to time, archiving it. Because it will be a large file, we might need it for recovery in the future. So we can refresh the log file again, extract its size.
+
+But log buffer cache writes to log file. Database buffer cache writes to database. So the log contains only history, and that too only for recovery. If the system doesn't crash, we don't need it.
+
+In the log, we keep things: when the transaction starts, its number is assigned, so begin transaction. When T1 read, it will be mentioned in the log that T1 read X at this time. T1 read Y. So every transaction, whatever operation it performed... read, write... or begin, end... read doing or write doing... commit doing or abort doing. When they say cancel registration... abort entry goes. T1 itself said abort.
+
+This means... if we look at T3... T3 transaction... it did many reads... X, wrote Y... then read... then wrote... It performed many operations. So as soon as it ended here... and became partially committed... it requested to commit. It had no conflict with anyone. It got the signal 'commit successfully complete.'
+
+Now the question is... its value... check point hasn't arrived so where will we recover it from if the system crashes?
+
+Commit point of a transaction... Transaction... First, two things. If a transaction... say 2's... this write operation it did X... 2 wrote Y... We have, due to some reason, modified pages written to the database file... Partially written... The database file has 20 and 200... The old value won't be there... Recovery won't happen... So it is not happening... You cannot write to the database file directly... Whatever change happens first is written to the log file... then to the database file...
+
+So... This happens... The log buffer cache is written... x 10 and 20... If the log is written, then allow it to write to the database...
+
+It is called Write-Ahead Logging (WAL) protocol. WAL protocol says you can only write to the database file... first ensure its log has been written to the disk... If the log is written, then write to the database.
+
+It is called Write-Ahead Logging (WAL) protocol.
+
+Log Buffer and Database File Operations:
+
+In the database file, these 20 and 200 were replaced. So, you're safe, right? We just checked which active key this was—it was T2. So, near T2, is there an "End" written anywhere with T2? Is "Commit" written anywhere in the log? It won't be. This means that T2's transactions began, but with it, the "End" or "Commit" entry hasn't been made in the log file yet. So, T2 wasn't completed like that.
+
+With T3, the "Commit" entry will also be there. There will be "Begin," there will be "End," and there will be a "Commit" entry with T3. So, as soon as the transaction says, "Commit me," when will the commit start? First, all its operations will successfully complete; it has no issues with anyone, and then it will commit.
+
+Commit Points and Log Buffer Management:
+
+Before committing—before responding to the commit or making it successful—what will the DBMS do? Remember, the database file hasn't been written to yet. When will it be written? When the checkpoint comes. But before guaranteeing it, what did you do? All updates from T3 in the data log buffer cache are first forcibly written from the log buffer to the log file. That means whatever operations T3 has performed, those modified pages are taken from the log buffer and written onto the disk in the log file. And along with T3, the "Commit" entry is also added. Beyond that point, this is called the "Commit Point" of this transaction T3.
+
+So, T3's commit point will come when all of T3's operations are successfully completed, and the content of T3's operations from the log buffer cache is written to the log file on the disk, and the "Commit" entry is added with T3. Then it receives a successful response.
+
+System Crash and Recovery:
+
+Now, tell me, once this successful response is received, the system crashed. So, T3's modified pages were lying in the database file yesterday, right? No, they weren't written yet; they had to be written, right? But where are they lying? They are lying in the log, so we are safe.
+
+The recovery manager will read the log. It will see which transactions were successfully completed after the last checkpoint before the system crash. That was T3. So, in the log—meaning the one with the commit entry (there's a commit entry with one as well, but that was after the last checkpoint)—it is T3.
+
+So, what will it do with T3? From its log—you can assume that if T3 has ten operations, they are lying in different locations in the log file. T3's first operation might have a singly or doubly linked list with it. T3's first operation will have written that the next operation is at this location in the log.
+
+Redo and Undo Operations:
+
+The second operation—the first will be recovered (redo)—where will it start? From T3's first operation. So, in the first operation, the pointer/address of the second operation will be there. The log manager will immediately go there. When it has redone the second operation, it will go to the third. Similarly, when it ends, the last operation is redone.
+
+So, those modified page/write versions from T3's log that were extracted are written directly into the database file. Now tell me, was T3 completely redone? What was its place? The database file. So, T3 became durable, right? It was recovered.
+
+Now, it looked at T2. This was also active in the system before, because there was no commit entry with it. And T4 too, and T5 too. So, it checks T2, T4, and T5. If they have any modified pages in the database—or rather, there is no commit entry with them—so for all their write operations, if they were written into the database, what will it do to them? Undo them.
+
+To undo T2, it will search for its last operation. The last write operation is undone first. When that happens, then its previous operation. So, basically, it reads the log in reverse order. For undo, it's backward tracing of the log file. For redo, it's forward tracing of the log file. That's how it is, right?
+
+Consistency and Partial Effects:
+
+So, when all the operations your T2 performed previously are undone—if they were written to the database—everything becomes undone. T4 and T5's written pages are also undone. Recovery happened. The partial effect was reversed, and what had been committed, we redid. So, the database is back to being consistent. Now, it has reached the same state it was in before the crash. The active transactions will be resubmitted. The user will perform them again.
+
+If ATM transactions happen and fail, they get wasted, and we do them again. But if your money didn't come out, but it was deducted from your account, and there was a problem ejecting it, so the remaining operations were successful because the transaction failed. So, that recovery happens—money goes back, or rather, goes back into the account.
+
+(Student Question: "Sir, sorry to interrupt. What is the need to undo them? You didn't write to the DB, so that's finished anyway.")
+
+There is no need to recover. Those transactions which are active and we didn't write their partial effect to the database... These are the potential transactions whose effect could be written to the database. Only T2, T4, T5. These are the active list.
+
+(Student Question: "But what was the effect of T2? What about the effects of T4 and T5?")
+
+That was an example I gave. If its effect also went... The recovery manager will check. Before the system crash, it will create an active list. Done. If "Partial" is written in them, it checks that and reverses it.
+
+Writing to Log vs. Database:
+
+So, we talked about partial effects. When we write to the database file, where do we enter it first? Into the log. And when we say "Commit" and we don't write it to the database, we delay it because we say, "When there are ten, we'll write at once," or "When five seconds pass, then we'll write." In between, if the system crashes, how do we guarantee it? It means that for whatever transaction is being committed, it cannot be committed until its update operation is written to the disk. Not necessarily to the disk in the database file, but where will we write it? In the log file.
+
+And how will we know which transaction was active and which committed? After committing, we also put a commit entry in the log. If the commit begins but there is no commit entry, it was active.
+
+(Student Question: "Sir, when is the log file updating? Because if before the system crash, the data didn't go from the log buffer to the log file, isn't the log buffer's value lost? Like if T3 hadn't committed yet but its transaction value went to the log buffer, and then the system crashed. Now the log file hasn't been updated.")
+
+There are two cases for the entry in the log file. As soon as a transaction commits, all its effects are written from the log cache to the log file. If T3 had ten operations lying in the cache, as soon as T3 said "Commit," the system takes all ten operations of T3 from the log cache and appends them to the log file. And it also adds a commit entry with T3. After that, the message goes out: "Successful Complete." Because the entry could fail even while committing, so that transaction would be considered failed until the entry is there.
+
+That's one case of writing. Another is if I need to release some buffer space, and I need to do victim selection of some pages, and there are some transactions in there that are still active—their pages are also picked up. We can steal those pages. We can write them. If we don't, then throughput will be very poor. Our buffer size is limited. So, if we write the pages of these transactions to the database file, we said that before writing, where will we write? In the log. So that both the old value and the new value are there. In the database, the new value replaces the old one. So we can't undo—we don't know if it was active and later failed. So, to be successful...
+
+That is why the partial effect of your good transactions can be stored in the database file. Number one. Too early. And even after committing, it's possible we don't write to the database; we delay it. Because in both cases, if we delay, we write T3's content to the log file. If we write the partial effect, we write to the log before that. So that we remain safe regarding data. We know if we need to undo, we will do it. If we need to redo, we will do it.
+
+When the system crashes, the recovery manager immediately checks these two lists. It constructs these two lists. And these are the candidates for recovery. It will redo this one's operations. For these operations, if needed, it will undo them.
+
+(Student Question: "Sir, is it possible that a transaction is committed, but the log buffer value hasn't gone to the log file yet, so isn't the log buffer value lost?")
+
+If a transaction's partial effect was never written to the database file at all, then that's good, there is no need for recovery. The partial effect was flushed in the cache, so no need. Suppose T4 wrote something, it was being written in the log, not being written in the cache, it also wrote. But its pages were never stolen. Meaning, the partial effect of T4 and T5 was never written to the database. So memory... none of its operations will be undone. It will immediately see that we never stole its effect. So that's done.
+
+Throughput and Efficiency:
+
+Different algorithms exist for this. Yes, there are some transactions whose pages we don't steal. We wait for them. Their pages cannot be stolen. Then throughput becomes poor. Ideally, steal should also be allowed, partial effect should also be allowed, and cache hit ratio also becomes poor. To improve that, we don't write transactions to the database immediately after commit; we delay it to occur at a checkpoint after some time, or after successfully completing 'n' number of transactions. This is a strategy. And this parameter is a number you can change according to your requirements. So, writing too early and doing it too late both challenge your throughput.
+
+Serial vs. Non-Serial Schedules:
+
+The commit point of a transaction is clear. Beyond the commit point, it is safe. Schedules, as we discussed once, can be serial or non-serial. The meaning of serial is that the result will always be correct. And the result of non-serial can be correct or incorrect. So, any non-serial schedule that is serializable is acceptable. Concurrency control protocols allow those non-serial schedules that are serializable. Serializable means "not serial." Equivalent to some serial schedule.
+
+If we check conflict operations and see it is serializable, we call it conflict serializable. What is conflict serializable? Before that, what is conflict equivalent? How can you define a schedule is conflict equivalent? Take two schedules, S and S'. S is non-serial, and S' is serial.
+
+So, in this diagram, suppose this schedule S is A (serial, let's call it S'). And the other is D (non-serial, let's call it S). In any two schedules, conflict equivalence... Conflict equivalence implies that the relative order of conflict operations in S and S' must be same.
+
+Conflict Operations:
+
+Is there any conflict operation in this? Yes, there is. One read it; before that, One wrote it. In this conflict operation, Two read which version? Which is updated by T1. Here, Two read which extra? Which is the committed version of X. Here, One later updated it. If the initial value of X was 10, One made it 20. Which one did this read? It's reading 20. Here, which X is being read? 10 is being read. So, the results in both can be different, right? Because I changed the order of the conflict operation. I said, previously what was happening? Two was reading X, but before that, One had written X. That's fine. Now I said, no, read Two first. Will it make a difference? So, if the conflict operation order changes, the result changes.
+
+Concurrency control protocol won't allow that. Because we know if we change the conflict order, the result will change. So, as long as the order of conflict operations in two schedules is the same, their result will be 100% same.
+
+Here, see. Which version of X did this read? Updated by T1. And who wrote first? T1 did, then T2 did. Here too, the order is exactly the same. Which version of X did this read? Updated by T1. The order is same. Who wrote first? T1 did, then T2 did. Here too, the order is exactly the same. Which version of X did this read? Updated by T1. The order is same. Who wrote first? T1 did, then T2 did. Here too, the order is exactly the same. So, are the relative order of conflict operations of D and A same or different? We will say that S is equivalent to S'. This we called conflict equivalent. Relative order of conflict operations is same.
+
+View Serializability:
+
+Now, coming to view serializability. If we prove a non-serial schedule is view equivalent to a serial schedule, then this schedule is view serializable. S is view serializable if S is conflict equivalent to some serial schedule. In other words, if S relative order and S' relative conflict order is same, then we will say S is conflict serializable. Because this is correct. So, we check this. We prove that your every schedule which is non-serial, it must be serializable, it must be equivalent to some serial schedule. We proved S (which is D) is equivalent to A (serial schedule). How did we check? Conflict operations same. Since conflict operations are same, the result will be 100% same. So, whatever value Two read in A, it read the same in D.
+
+The outcome of both will be the same. The only difference is that in the non-serial schedule, our throughput is better because we are interleaving processes. We are getting the advantage. The problem is consistency.
+
+View serializable involves a simple definition. In view serializable, as long as every read operation's version is the same... "All read versions should be same." Two read operation D, Two read which version? Which is updated by T1.
+
+So, as long as the read version of every item in a transaction is the same, we want to check S and S' (where this is non-serial and this is view equivalent to it). If S and S' are view equivalent, we will say S is view serializable.
+
+For this, we check two things. All read versions must be same. If One read X's value here (in this), One should read the same value here too. If X's value here is 10, One reads 10. If One reads 20 here... If One reads 20 here... If X is being read as 10 here, and 20 here, the result will be different. But this is the 'Read' condition.
+
+The second condition is: The last write item, operation on each and every item must be same. For example, Three wrote on X. Before that, Two also wrote. And before that, One also wrote. So whose was the last write? Three's. In this, it is happening like this. Next, One wrote, then Two, then Three. In S', Two wrote on X first, then One, but who did the last write? Three. So, as long as the last write operation on the same item is same... but read every read operation must be same. Then we will say S and S' are equivalent. Then we will say S is view serializable schedule.
+
+Try this. Read this chapter thoroughly. There are some isolation levels. Which level guarantees this violation? These are the dirty reads, non-repeatable reads, phantom reads. Next lecture, we will spend some time on this. And your questions should be there. Good.
+
+Left Panel:DB Buffer CacheDB LogCommit point of a TransactionConflict operationsIsolation Levels of a Trans [Transaction]Read UncommittedRead CommittedRepeatable ReadViolations:Dirty ReadNon-Repeatable [Read]Phantom ProblemRight Panel:$\rightarrow$ Transaction$\rightarrow$ Database Access operationsRead-itemWrite-item$\rightarrow$ Schedule (or History)SerialNon-SerialSerializableConflict-SerializableView-Serializable$\rightarrow$ Equivalent ScheduleResult-EquivalentConflict-EquivalentSerializable SchedulePart 2: Handwritten Notebook NotesFrom Image 4Top Header: Challenges$\rightarrow$ Data hungry models$\rightarrow$ Computational challenges$\rightarrow$ Data preprocessing[Boxed Text]: Data Comp | [ADB]Main Heading: Transaction Processing ConceptsSerial Processing $\rightarrow$ T1 $\rightarrow$ T2 $\rightarrow$ T3 OR T3 $\rightarrow$ T2 $\rightarrow$ T1Parallel " [Processing]Interleaved " [Processing]Transactions are independent.Diagram Section 1: Serial[Timeline Diagram drawn]: Shows T1 executing fully, followed by T2, followed by T3 sequentially.Diagram Section 2: InterleavedDefinition: $\rightarrow$ multiple at a time by switching[Timeline Diagram drawn]: Shows T1, T2, and T3 overlapping.Visual description: T1 starts, pauses while T2 runs, T2 pauses while T1 or T3 runs (Context switching).
