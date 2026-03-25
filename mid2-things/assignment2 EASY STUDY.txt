@@ -1,0 +1,842 @@
+=====================================================================
+   ASSIGNMENT 3 - INDEXING STRUCTURES (SUPER EASY VERSION)
+=====================================================================
+
+This assignment has 4 questions. I'll solve each one step by step
+like you're seeing indexes for the very first time.
+
+
+=====================================================================
+COMMON GIVEN VALUES (used in Q1 and Q2):
+=====================================================================
+
+  Block pointer P = 6 bytes
+  Record pointer PR = 7 bytes
+  Record length R = 150 bytes
+  Each field = 10 bytes
+  Fixed length, unspanned records
+
+
+  Q1 uses: B = 8192 bytes, r = 10 billion = 10,000,000,000
+  Q2 uses: B = 4096 bytes, r = 100 million = 100,000,000
+
+
+FIRST THINGS FIRST - Calculate bfr and b for BOTH:
+---------------------------------------------------
+
+Q1: bfr = floor(B/R) = floor(8192/150) = 54 records per block
+    b = ceiling(r/bfr) = ceiling(10,000,000,000 / 54) = 185,185,186 blocks
+
+Q2: bfr = floor(B/R) = floor(4096/150) = 27 records per block
+    b = ceiling(r/bfr) = ceiling(100,000,000 / 27) = 3,703,704 blocks
+
+I'll solve everything for BOTH Q1 and Q2 side by side.
+
+
+=====================================================================
+PART (a): PRIMARY INDEX on OrderNo
+=====================================================================
+
+WHAT IS THIS?
+  The file is SORTED by OrderNo (a unique key).
+  Primary index = SPARSE = one index entry per DATA BLOCK.
+  Think: "A table of contents with one entry per page"
+
+
+(i) Index blocking factor bfri (also called fan-out fo):
+---------------------------------------------------------
+  Each index entry = OrderNo value + block pointer
+  Index entry size Ri = V + P = 10 + 6 = 16 bytes
+
+  bfri = floor(B / Ri)
+
+  Q1: bfri = floor(8192 / 16) = 512
+  Q2: bfri = floor(4096 / 16) = 256
+
+  This means:
+    Q1: Each index block holds 512 entries
+    Q2: Each index block holds 256 entries
+
+
+(ii) First-level index entries and blocks:
+-------------------------------------------
+  Primary index has ONE entry per data block.
+
+  Number of entries r1 = b (number of data blocks)
+
+  Q1: r1 = 185,185,186 entries
+      b1 = ceiling(185,185,186 / 512) = 361,690 blocks
+
+  Q2: r1 = 3,703,704 entries
+      b1 = ceiling(3,703,704 / 256) = 14,468 blocks
+
+
+(iii) Number of levels for multilevel index:
+----------------------------------------------
+  Keep dividing by bfri until you get 1 block.
+
+  Q1 (bfri = 512):
+    Level 1: b1 = 361,690 blocks
+    Level 2: b2 = ceiling(361,690 / 512) = 707 blocks
+    Level 3: b3 = ceiling(707 / 512) = 2 blocks
+    Level 4: b4 = ceiling(2 / 512) = 1 block  <-- TOP!
+    Answer: 4 levels
+
+  Q2 (bfri = 256):
+    Level 1: b1 = 14,468 blocks
+    Level 2: b2 = ceiling(14,468 / 256) = 57 blocks
+    Level 3: b3 = ceiling(57 / 256) = 1 block  <-- TOP!
+    Answer: 3 levels
+
+
+(iv) Total blocks for the multilevel index:
+---------------------------------------------
+  Just add up all levels.
+
+  Q1: 361,690 + 707 + 2 + 1 = 362,400 blocks
+  Q2: 14,468 + 57 + 1 = 14,526 blocks
+
+
+(v) Block accesses to find a record:
+--------------------------------------
+  = number of levels + 1 (for the actual data block)
+
+  Q1: 4 + 1 = 5 block accesses
+  Q2: 3 + 1 = 4 block accesses
+
+  Think about this: 10 BILLION records, and we find any record
+  in just 5 disk reads! That's the power of indexes!
+
+
+=====================================================================
+PART (b): SECONDARY INDEX on OrderNo (Key Field)
+=====================================================================
+
+WHAT'S DIFFERENT?
+  File is NOT sorted by OrderNo. So we need a secondary index.
+  OrderNo is still a KEY (unique), so the index is DENSE.
+  DENSE = one entry for EVERY RECORD (not per block!).
+
+  This is the big difference:
+    Primary: entries = number of blocks (b)
+    Secondary: entries = number of records (r)  <-- WAY more!
+
+
+(i) Index blocking factor:
+  Same as before! Ri = 10 + 6 = 16, so:
+  Q1: bfri = 512
+  Q2: bfri = 256
+
+
+(ii) First-level entries and blocks:
+  r1 = r (one per record!)
+
+  Q1: r1 = 10,000,000,000 entries
+      b1 = ceiling(10,000,000,000 / 512) = 19,531,250 blocks
+
+  Q2: r1 = 100,000,000 entries
+      b1 = ceiling(100,000,000 / 256) = 390,625 blocks
+
+  HUGE compared to primary index!
+
+
+(iii) Number of levels:
+
+  Q1 (bfri = 512):
+    Level 1: b1 = 19,531,250
+    Level 2: b2 = ceiling(19,531,250 / 512) = 38,147 blocks
+    Level 3: b3 = ceiling(38,147 / 512) = 75 blocks
+    Level 4: b4 = ceiling(75 / 512) = 1 block  <-- TOP!
+    Answer: 4 levels
+
+  Q2 (bfri = 256):
+    Level 1: b1 = 390,625
+    Level 2: b2 = ceiling(390,625 / 256) = 1,526 blocks
+    Level 3: b3 = ceiling(1,526 / 256) = 6 blocks
+    Level 4: b4 = ceiling(6 / 256) = 1 block  <-- TOP!
+    Answer: 4 levels
+
+
+(iv) Total index blocks:
+  Q1: 19,531,250 + 38,147 + 75 + 1 = 19,569,473 blocks
+  Q2: 390,625 + 1,526 + 6 + 1 = 392,158 blocks
+
+
+(v) Block accesses:
+  Q1: 4 + 1 = 5
+  Q2: 4 + 1 = 5
+
+
+COMPARISON: Primary vs Secondary
+----------------------------------
+                    | Q1 Primary | Q1 Secondary | Q2 Primary | Q2 Secondary
+--------------------|------------|-------------|------------|-------------
+Level 1 blocks      | 361,690    | 19,531,250  | 14,468     | 390,625
+Total index blocks  | 362,400    | 19,569,473  | 14,526     | 392,158
+Levels              | 4          | 4           | 3          | 4
+Block accesses      | 5          | 5           | 4          | 5
+
+KEY TAKEAWAY: Secondary index uses WAY more space (because DENSE),
+but the number of block accesses is similar because the multilevel
+structure keeps the number of levels small!
+
+
+=====================================================================
+PART (c): SECONDARY INDEX on CustID (Non-Key Field!)
+=====================================================================
+
+WHAT'S DIFFERENT?
+  - CustID is NOT unique (non-key). Multiple orders per customer!
+  - File is NOT ordered by CustID.
+  - 50,000 distinct CustID values
+  - Records evenly distributed = r / 50,000 records per CustID
+
+  Records per CustID:
+    Q1: 10,000,000,000 / 50,000 = 200,000 records per customer
+    Q2: 100,000,000 / 50,000 = 2,000 records per customer
+
+  Uses an EXTRA LEVEL OF INDIRECTION:
+    Index --> Pointer Block (list of record pointers) --> Data Blocks
+
+  Why? Because each CustID has many records, we need a block full
+  of pointers to find all of them.
+
+
+(i) Index blocking factor:
+  Index entry = CustID value + block pointer
+  Ri = 10 + 6 = 16 bytes
+
+  Q1: bfri = floor(8192/16) = 512
+  Q2: bfri = floor(4096/16) = 256
+
+
+(ii) Blocks for the indirection level:
+  For EACH distinct CustID, we store pointers to ALL its records.
+
+  Q1: Each CustID has 200,000 records
+      Pointers needed = 200,000 x PR = 200,000 x 7 = 1,400,000 bytes
+      Blocks per CustID = ceiling(1,400,000 / 8192) = 171 blocks
+      Total indirection blocks = 50,000 x 171 = 8,550,000 blocks
+
+  Q2: Each CustID has 2,000 records
+      Pointers needed = 2,000 x 7 = 14,000 bytes
+      Blocks per CustID = ceiling(14,000 / 4096) = 4 blocks
+      Total indirection blocks = 50,000 x 4 = 200,000 blocks
+
+  That's a LOT of pointer blocks!
+
+
+(iii) First-level index entries and blocks:
+  One entry per distinct CustID value.
+
+  r1 = 50,000 entries (for both Q1 and Q2!)
+
+  Q1: b1 = ceiling(50,000 / 512) = 98 blocks
+  Q2: b1 = ceiling(50,000 / 256) = 196 blocks
+
+
+(iv) Number of levels:
+
+  Q1 (bfri = 512):
+    Level 1: 98 blocks
+    Level 2: ceiling(98 / 512) = 1 block  <-- TOP!
+    Answer: 2 levels
+
+  Q2 (bfri = 256):
+    Level 1: 196 blocks
+    Level 2: ceiling(196 / 256) = 1 block  <-- TOP!
+    Answer: 2 levels
+
+
+(v) Total blocks (index + indirection):
+
+  Q1: b1 + b2 + indirection = 98 + 1 + 8,550,000 = 8,550,099 blocks
+  Q2: b1 + b2 + indirection = 196 + 1 + 200,000 = 200,197 blocks
+
+
+(vi) Block accesses to retrieve ALL records for one CustID:
+  = index levels + indirection blocks for 1 CustID + data blocks
+
+  The records are scattered (file NOT ordered by CustID),
+  so in WORST case each record is in a different data block.
+
+  Q1: 2 + 171 + 200,000 = 200,173 block accesses
+      (2 for index, 171 for pointer blocks, 200,000 for data)
+      That's terrible! Each of the 200,000 records could be
+      in a different block.
+
+  Q2: 2 + 4 + 2,000 = 2,006 block accesses
+      (2 for index, 4 for pointer blocks, 2,000 for data)
+
+  This is VERY expensive because records are scattered.
+  That's why clustering index (part d) is so much better!
+
+
+=====================================================================
+PART (d): CLUSTERING INDEX on CustID
+=====================================================================
+
+WHAT'S DIFFERENT?
+  Now the file IS sorted by CustID! Records with the same CustID
+  are stored NEXT TO EACH OTHER (clustered).
+  Uses "block anchors" = each new CustID starts at a new block.
+
+
+(i) Index blocking factor:
+  Ri = 10 + 6 = 16
+  Q1: bfri = 512
+  Q2: bfri = 256
+
+
+(ii) First-level entries and blocks:
+  One entry per distinct CustID = 50,000 entries
+
+  Q1: b1 = ceiling(50,000 / 512) = 98 blocks
+  Q2: b1 = ceiling(50,000 / 256) = 196 blocks
+
+
+(iii) Number of levels:
+
+  Q1: Level 2 = ceiling(98 / 512) = 1  --> 2 levels
+  Q2: Level 2 = ceiling(196 / 256) = 1 --> 2 levels
+
+
+(iv) Total index blocks:
+
+  Q1: 98 + 1 = 99 blocks
+  Q2: 196 + 1 = 197 blocks
+
+  Compare to secondary on CustID: 8,550,099 vs 99!
+  Clustering is MASSIVELY more space-efficient!
+
+
+(v) Block accesses to retrieve ALL records for one CustID:
+
+  Step 1: Search the index to find the first block
+    = levels + 1 = 2 + 1 = 3
+
+  Step 2: Read all blocks containing this CustID's records
+    Records per CustID:
+      Q1: 200,000 records in ceiling(200,000/54) = 3,704 blocks
+      Q2: 2,000 records in ceiling(2,000/27) = 75 blocks
+
+    Because of block anchors, each CustID starts at a new block,
+    and since records ARE clustered, these blocks are CONTIGUOUS!
+
+  Total:
+    Q1: 2 + 3,704 = 3,706 block accesses
+    Q2: 2 + 75 = 77 block accesses
+
+  Compare to secondary index:
+    Q1: 200,173 vs 3,706  (54x better!)
+    Q2: 2,006 vs 77       (26x better!)
+
+  WHY such a huge difference?
+    Secondary: records SCATTERED --> each record needs its own block read
+    Clustering: records TOGETHER --> read consecutive blocks, many records per block
+
+
+=====================================================================
+PART (e): B+-TREE INDEX on OrderNo
+=====================================================================
+
+WHAT IS A B+-TREE?
+  A self-balancing tree where:
+  - Internal nodes hold KEYS + POINTERS TO CHILDREN (no data pointers)
+  - Leaf nodes hold KEYS + POINTERS TO ACTUAL RECORDS
+  - All leaves are at the same level (balanced!)
+
+
+(i) Orders p and pleaf:
+
+  INTERNAL NODE order p:
+    Each internal node has: p child pointers + (p-1) key values
+    (p x P) + ((p-1) x V) <= B
+
+    Q1: (p x 6) + ((p-1) x 10) <= 8192
+        6p + 10p - 10 <= 8192
+        16p <= 8202
+        p = floor(8202/16) = 512
+
+    Q2: (p x 6) + ((p-1) x 10) <= 4096
+        16p <= 4106
+        p = floor(4106/16) = 256
+
+  LEAF NODE order pleaf:
+    Each leaf has: pleaf key-pointer pairs + 1 next-leaf pointer
+    (pleaf x (V + PR)) + P <= B
+
+    Q1: (pleaf x (10+7)) + 6 <= 8192
+        17 x pleaf <= 8186
+        pleaf = floor(8186/17) = 481
+
+    Q2: (pleaf x (10+7)) + 6 <= 4096
+        17 x pleaf <= 4090
+        pleaf = floor(4090/17) = 240
+
+
+(ii) Leaf blocks needed (70% full):
+  Average keys per leaf = ceiling(0.70 x pleaf)
+
+  Q1: keys per leaf = ceiling(0.70 x 481) = ceiling(336.7) = 337
+      Leaf blocks b1 = ceiling(r / 337)
+                     = ceiling(10,000,000,000 / 337) = 29,673,591 blocks
+
+  Q2: keys per leaf = ceiling(0.70 x 240) = ceiling(168) = 168
+      Leaf blocks b1 = ceiling(100,000,000 / 168) = 595,239 blocks
+
+
+(iii) Number of levels (internal nodes 70% full):
+  Average fan-out fo = ceiling(0.70 x p)
+
+  Q1: fo = ceiling(0.70 x 512) = ceiling(358.4) = 359
+
+    Level 1 (leaves): 29,673,591 blocks
+    Level 2: ceiling(29,673,591 / 359) = 82,656 blocks
+    Level 3: ceiling(82,656 / 359) = 231 blocks
+    Level 4: ceiling(231 / 359) = 1 block  <-- ROOT!
+    Answer: 4 levels
+
+  Q2: fo = ceiling(0.70 x 256) = ceiling(179.2) = 180
+
+    Level 1 (leaves): 595,239 blocks
+    Level 2: ceiling(595,239 / 180) = 3,308 blocks
+    Level 3: ceiling(3,308 / 180) = 19 blocks
+    Level 4: ceiling(19 / 180) = 1 block  <-- ROOT!
+    Answer: 4 levels
+
+
+(iv) Total B+-tree blocks:
+
+  Q1: 29,673,591 + 82,656 + 231 + 1 = 29,756,479 blocks
+  Q2: 595,239 + 3,308 + 19 + 1 = 598,567 blocks
+
+
+(v) Block accesses:
+  = levels + 1
+
+  Q1: 4 + 1 = 5 block accesses
+  Q2: 4 + 1 = 5 block accesses
+
+
+=====================================================================
+PART (f): B-TREE INDEX on OrderNo (Compare with B+-Tree)
+=====================================================================
+
+WHAT'S DIFFERENT?
+  In B-Tree, EVERY node (not just leaves) has record pointers.
+  This makes nodes BIGGER, so fewer keys fit, so the tree needs
+  more nodes.
+
+
+(i) Order p:
+  (p x P) + ((p-1) x (V + PR)) <= B
+
+  Q1: (p x 6) + ((p-1) x (10+7)) <= 8192
+      6p + 17p - 17 <= 8192
+      23p <= 8209
+      p = floor(8209/23) = 356
+
+  Q2: (p x 6) + ((p-1) x (10+7)) <= 4096
+      23p <= 4113
+      p = floor(4113/23) = 178
+
+  Compare: B+-Tree had p=512/256, B-Tree has p=356/178.
+  SMALLER order because entries are bigger!
+
+
+(ii) Leaf blocks (70% full):
+  Keys per node = ceiling(0.70 x (p-1))
+
+  Q1: keys = ceiling(0.70 x 355) = ceiling(248.5) = 249
+      b1 = ceiling(10,000,000,000 / 249) = 40,160,643 blocks
+
+  Q2: keys = ceiling(0.70 x 177) = ceiling(123.9) = 124
+      b1 = ceiling(100,000,000 / 124) = 806,452 blocks
+
+
+(iii) Number of levels:
+  Fan-out fo = ceiling(0.70 x p)
+
+  Q1: fo = ceiling(0.70 x 356) = ceiling(249.2) = 250
+
+    Level 1: 40,160,643
+    Level 2: ceiling(40,160,643 / 250) = 160,643 blocks
+    Level 3: ceiling(160,643 / 250) = 643 blocks
+    Level 4: ceiling(643 / 250) = 3 blocks
+    Level 5: ceiling(3 / 250) = 1 block  <-- ROOT!
+    Answer: 5 levels
+
+  Q2: fo = ceiling(0.70 x 178) = ceiling(124.6) = 125
+
+    Level 1: 806,452
+    Level 2: ceiling(806,452 / 125) = 6,452 blocks
+    Level 3: ceiling(6,452 / 125) = 52 blocks
+    Level 4: ceiling(52 / 125) = 1 block  <-- ROOT!
+    Answer: 4 levels
+
+
+(iv) Total blocks:
+  Q1: 40,160,643 + 160,643 + 643 + 3 + 1 = 40,321,933 blocks
+  Q2: 806,452 + 6,452 + 52 + 1 = 812,957 blocks
+
+
+(v) Block accesses:
+  Q1: 5 + 1 = 6 (but could be less if found at internal node)
+  Q2: 4 + 1 = 5
+
+
+COMPARISON TABLE:
+                  | Q1 B+-Tree   | Q1 B-Tree     | Q2 B+-Tree | Q2 B-Tree
+------------------|-------------|---------------|------------|----------
+Order p           | 512         | 356           | 256        | 178
+Leaf blocks       | 29,673,591  | 40,160,643    | 595,239    | 806,452
+Total blocks      | 29,756,479  | 40,321,933    | 598,567    | 812,957
+Levels            | 4           | 5             | 4          | 4
+Block accesses    | 5           | 6             | 5          | 5
+
+B+-Tree wins: fewer blocks, fewer (or same) levels!
+
+
+=====================================================================
+Q3: MAXIMUM RECORDS INDEXED BY 4-LEVEL TREE
+=====================================================================
+
+GIVEN:
+- Block size = 4KB = 4096 bytes
+- Block pointer P = 6 bytes
+- Record pointer PR = 7 bytes
+- Block header = 50 bytes (this is NEW! Subtract from usable space!)
+- Search key = 10 bytes
+- 4 levels (including root)
+
+USABLE SPACE per block = 4096 - 50 = 4046 bytes
+
+The question asks: "What's the MAXIMUM number of records
+we can index with a 4-level tree?"
+
+This means: fill every node to 100% capacity (not 69% or 70%).
+
+
+(a) B+-TREE (4 levels):
+-------------------------
+
+Step 1: Internal node order p
+  (p x P) + ((p-1) x V) <= 4046
+  (p x 6) + ((p-1) x 10) <= 4046
+  6p + 10p - 10 <= 4046
+  16p <= 4056
+  p = floor(4056/16) = 253
+
+  Each internal node can point to up to 253 children.
+
+Step 2: Leaf node order pleaf
+  (pleaf x (V + PR)) + P <= 4046
+  (pleaf x 17) + 6 <= 4046
+  17 x pleaf <= 4040
+  pleaf = floor(4040/17) = 237
+
+  Each leaf can hold up to 237 key-pointer pairs.
+
+Step 3: Calculate max records for 4 levels
+  In a B+-tree with 4 levels:
+    Level 1 = Root (1 node, up to 253 children)
+    Level 2 = up to 253 nodes
+    Level 3 = up to 253 x 253 = 64,009 nodes
+    Level 4 = LEAVES = up to 253 x 253 x 253 = 16,194,277 leaves
+
+  Wait, let me think about this more carefully:
+    Level 1 (root): 1 node with p children = 253
+    Level 2: 253 nodes, each with 253 children = 253^2 = 64,009
+    Level 3: 64,009 nodes, each with 253 children = 253^3 = 16,194,277
+    Level 4 (leaves): these ARE level 3's children...
+
+  Actually in a 4-level B+-tree:
+    Level 4 = root (top)
+    Level 3 = internal
+    Level 2 = internal
+    Level 1 = leaves
+
+  OR counting from top:
+    Level 1 = root
+    Level 2 = internal
+    Level 3 = internal
+    Level 4 = leaves
+
+  Number of leaves = p^(levels-1) = 253^3 = 16,194,277
+
+  Each leaf holds pleaf = 237 records
+
+  MAX RECORDS = 253^3 x 237
+
+  253^3 = 253 x 253 x 253 = 16,194,277
+  16,194,277 x 237 = 3,838,043,649
+
+  Answer: approximately 3.84 BILLION records!
+
+
+(b) B-TREE (4 levels):
+------------------------
+
+Step 1: Order p
+  (p x P) + ((p-1) x (V + PR)) <= 4046
+  (p x 6) + ((p-1) x 17) <= 4046
+  6p + 17p - 17 <= 4046
+  23p <= 4063
+  p = floor(4063/23) = 176
+
+Step 2: Max records
+
+  In a B-tree, ALL nodes (not just leaves) can hold records.
+  Each node holds p-1 = 175 key-record pairs.
+
+  Level 1 (root): 1 node --> 175 records
+  Level 2: p = 176 nodes --> 176 x 175 = 30,800 records
+  Level 3: p^2 = 30,976 nodes --> 30,976 x 175 = 5,420,800 records
+  Level 4 (leaves): p^3 = 5,451,776 nodes --> 5,451,776 x 175 = 954,060,800 records
+
+  Total = 175 + 30,800 + 5,420,800 + 954,060,800
+
+  Wait, let me recalculate more carefully.
+
+  Actually the typical way to think about it:
+
+  Number of leaves = p^3 = 176^3 = 5,451,776
+  Records per node (at every level) = p-1 = 175
+
+  Total records at each level:
+    Root (1 node):           1 x 175 = 175
+    Level 2 (176 nodes):     176 x 175 = 30,800
+    Level 3 (176^2 nodes):   30,976 x 175 = 5,420,800
+    Level 4 (176^3 leaves):  5,451,776 x 175 = 953,560,800
+
+  Grand total = 175 + 30,800 + 5,420,800 + 953,560,800
+              = 959,012,575
+
+  Answer: approximately 959 MILLION records
+
+  OR if counting just leaves (simpler interpretation):
+    176^3 x 175 = 953,560,800
+
+  COMPARISON:
+    B+-Tree: ~3.84 billion records
+    B-Tree:  ~959 million records
+
+  B+-Tree can index about 4x more records in the same number of levels!
+  Why? Because B+-Tree internal nodes are SMALLER (no record pointers),
+  so they have HIGHER fan-out (253 vs 176 children per node).
+
+
+=====================================================================
+Q4: BLOCK FETCHES FOR QUERIES
+=====================================================================
+
+GIVEN:
+- Relation: Customer(CustID, Rating, Age)
+- CustID is key (unique), all attributes are integers
+- 15,000 data blocks
+- 4-level B+-tree index on CustID
+- 1 tree node = 1 disk block
+
+KEY CONCEPT: x = number of tree levels = 4
+
+
+QUERY (a): SELECT * FROM Customer WHERE CustID = 200
+------------------------------------------------------
+
+What's happening: "Find ONE specific customer by their unique ID"
+
+We have a B+-tree index on CustID. Perfect match!
+
+  Step 1: Traverse the B+-tree (4 levels = 4 block reads)
+  Step 2: Read the actual data block (+1)
+
+  Answer: x + 1 = 4 + 1 = 5 block fetches
+
+  Simple! Go through the tree, then read the data.
+
+
+QUERY (b): SELECT age FROM Customer WHERE CustID = 200 AND Rating = 1
+----------------------------------------------------------------------
+
+What's happening: "Find customer 200 AND check if Rating is 1"
+
+We have an index on CustID but NOT on Rating.
+
+  Step 1: Use B+-tree to find CustID = 200 (4 + 1 = 5 block reads)
+  Step 2: Now we have the record. Check if Rating = 1.
+          This check happens IN MEMORY (no extra disk read!)
+
+  Answer: x + 1 = 4 + 1 = 5 block fetches
+
+  Same as (a)! The Rating check is free because we already
+  loaded the record into memory. We just filter in RAM.
+
+
+QUERY (c): SELECT * FROM Customer WHERE CustID IN (210, 220, 230)
+------------------------------------------------------------------
+
+What's happening: "Find 3 specific customers by their IDs"
+
+Each lookup is independent. For EACH CustID:
+  - Traverse B+-tree: 4 blocks
+  - Read data block: 1 block
+  - Total per customer: 5 blocks
+
+For 3 customers: 3 x (x + 1) = 3 x 5 = 15
+
+Answer: 15 block fetches
+
+Note: In reality, some tree blocks might be cached in memory
+after the first lookup, so it could be fewer. But for exam
+purposes, assume worst case = 15.
+
+
+QUERY (d): SELECT CustID, age FROM Customer WHERE Rating = 1
+--------------------------------------------------------------
+
+What's happening: "Find ALL customers with Rating = 1"
+
+We have NO index on Rating! Only on CustID.
+The B+-tree on CustID is USELESS here because we're
+searching by Rating, not CustID.
+
+Only option: FULL TABLE SCAN (read every block)
+
+Answer: b = 15,000 block fetches
+
+We have to read ALL 15,000 data blocks and check each record's
+Rating value. There's no shortcut without an index on Rating.
+
+Think of it like: You have a phone book sorted by NAME,
+but someone asks "find everyone who lives on Street 5."
+The alphabetical sorting doesn't help - you scan everything!
+
+
+QUERY (e): SELECT * FROM Customer WHERE CustID >= 200
+-------------------------------------------------------
+
+What's happening: "Find ALL customers with CustID 200 or higher"
+
+This is a RANGE QUERY. The B+-tree IS useful here!
+
+  Step 1: Use B+-tree to find the FIRST record with CustID = 200
+          Cost: x + 1 = 4 + 1 = 5
+
+  Step 2: In a B+-tree, leaf nodes are LINKED TOGETHER!
+          So once we find CustID 200, we just follow the leaf
+          chain to get 201, 202, 203, ... all the way to the end.
+
+  How many records match? We don't know exactly, but let's say
+  roughly HALF the records have CustID >= 200.
+  (If CustIDs are uniformly distributed)
+
+  Data blocks to read after finding the first one:
+    Approximately b/2 = 15,000/2 = 7,500 blocks
+
+  Plus the leaf-level index blocks we traverse:
+    We also read leaf nodes as we follow the chain.
+
+  Answer: x + b/2 = 4 + 7,500 = 7,504 block fetches
+  (approximately, assuming half the records qualify)
+
+  OR if most records qualify: closer to x + b = 4 + 15,000
+
+  The exact answer depends on what fraction of records have
+  CustID >= 200. Without more info, a reasonable estimate is
+  x + (fraction x b).
+
+  Key insight: We need the index to find WHERE to START,
+  then we scan sequentially from there.
+
+
+QUERY (f): SELECT COUNT(*) FROM Customer WHERE CustID >= 200
+--------------------------------------------------------------
+
+What's happening: "Just COUNT customers with CustID >= 200"
+(We don't need the actual data rows!)
+
+Two ways to think about this:
+
+APPROACH 1 (Using just the B+-tree leaves):
+  The B+-tree leaves contain ALL the CustID values.
+  We can count them WITHOUT reading the data blocks!
+
+  Step 1: Find CustID 200 in the tree: x = 4 blocks
+  Step 2: Scan leaf nodes (linked list), counting entries
+          No need to read data blocks!
+
+  Leaf blocks to scan: about half the leaf level
+  This is MUCH less than 15,000 data blocks.
+
+  Answer: x + (number of leaf blocks from 200 onwards)
+          = 4 + (roughly half the leaf blocks)
+
+APPROACH 2 (Simple exam answer):
+  If the index stores all needed info, we avoid data blocks.
+  Minimum: x = 4 (just to find the starting point)
+  Then scan leaf nodes only.
+
+  The key difference from (e): NO "+1" per record for data blocks!
+  We save a LOT of I/O because COUNT doesn't need actual records.
+
+  Answer: x + leaf blocks scanned (much less than query e)
+
+  A simple exam-safe answer: This is cheaper than (e) because
+  we only scan index leaf nodes, not data blocks.
+
+
+=====================================================================
+MEGA CHEAT SHEET - QUICK REFERENCE FOR ALL INDEX TYPES
+=====================================================================
+
+STEP 0 (ALWAYS DO THIS FIRST):
+  bfr = floor(B/R)
+  b = ceiling(r/bfr)
+  Ri = V + P = field_size + pointer_size
+  bfri = floor(B/Ri)
+
+PRIMARY INDEX (file sorted on key):
+  Entries = b (one per block)  -- SPARSE
+  Levels: keep dividing by bfri
+  Access = levels + 1
+
+SECONDARY INDEX on KEY (file NOT sorted):
+  Entries = r (one per record)  -- DENSE
+  Levels: keep dividing by bfri
+  Access = levels + 1
+
+SECONDARY INDEX on NON-KEY (file NOT sorted):
+  Entries = distinct values
+  Indirection blocks = distinct_values x ceiling(records_per_value x PR / B)
+  Access = levels + indirection_blocks_for_1_value + records_per_value
+
+CLUSTERING INDEX (file sorted on non-key):
+  Entries = distinct values
+  Access to get ALL records of one value:
+    = levels + ceiling(records_per_value / bfr)
+
+B+-TREE:
+  Internal order: (p x P) + ((p-1) x V) <= B
+  Leaf order: (pleaf x (V+PR)) + P <= B
+  Fill at X%: keys per leaf = ceiling(X% x pleaf)
+              fan-out = ceiling(X% x p)
+  Access = levels + 1
+
+B-TREE:
+  Order: (p x P) + ((p-1) x (V+PR)) <= B
+  (bigger entries = smaller order = taller tree!)
+
+
+QUERY COST PATTERNS:
+  Find ONE record by indexed key:     x + 1
+  COUNT records by indexed key:       x (no data block!)
+  Find N records by indexed key:      N x (x + 1)
+  Range query (indexed, clustered):   x + matching_blocks
+  Query on NON-indexed field:         b (full scan!)
+
+
+=====================================================================
+Good luck on your exam! The formulas are your best friend here.
+Write them down first, plug in numbers, and you'll do great!
+=====================================================================
